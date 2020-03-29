@@ -1,0 +1,149 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 2 - Installation</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-2---installation" class="chapter">Chapter 2 - Installation</h1>
+
+    <p>In this chapter we are going to walk through installing Terraform on your machine.  Then we are going to setup an AWS account and configure Terraform to use it.  </p>
+
+    <h2 id="leanpub-auto-installation" class="section">Installation</h2>
+
+    <p>Visit the official Terraform download page and download the latest version for your target platform.  Unzip the download to extract the Terraform binary.  Terraform runs as a single binary so all you need to do is move the binary so that it is in a folder that is in your path. The follow varies slightly by platform:</p>
+
+    <h3 id="leanpub-auto-mac-oslinux" class="subsection">Mac OS/Linux</h3>
+
+    <ol>
+        <li>Open up a Terminal</li>
+        <li>Change into the downloads directory, normally by running <code>cd ~/Downloads</code>
+        </li>
+        <li>Move the Terraform binary into <code>/usr/local/bin</code> by running <code>mv ~/Downloads/terraform /usr/local/bin/</code>
+        </li>
+        <li>Test the installation by running <code>terraform version</code>, if installation is successful then you should see such as <code>Terraform v0.12.7</code>
+        </li>
+    </ol>
+
+    <h3 id="leanpub-auto-windows" class="subsection">Windows</h3>
+
+    <ol>
+        <li>Move the unzipped Terraform binary into your desired folder such as <code>c:\Terraform</code>
+        </li>
+        <li>Search for <code>View advanced system settings</code>
+        </li>
+        <li>In then window that appears click <code>environment variables</code>
+        </li>
+        <li>In the system variables section at the bottom find the path variable, left click it to select it and then click edit</li>
+        <li>In the edit system variable window scroll to the end of the variable value box, ensure that it ends in a <code>;</code> then enter the path where you moved the Terraform binary into e.g. <code>c:\Terraform</code>
+        </li>
+    </ol>
+    <p class="fake-para">1.  Click ok to close all of the windows you have opened</p>
+    <ol>
+        <li>Open up a Command prompt by pressing the windows key, typing <code>cmd</code> and pressing enter.</li>
+        <li>Test the installation by running <code>terraform version</code>, if installation is successful then you should see such as <code>Terraform v0.12.7</code>
+        </li>
+    </ol>
+
+    <h2 id="leanpub-auto-setting-up-your-free-aws-account" class="section">Setting up your free AWS Account</h2>
+
+    <p>Due to the fact Amazon change these pages quite a bit, I’m just going to talk through the general process of what you need to do.</p>
+
+    <ol>
+        <li>Head over to https://aws.amazon.com</li>
+        <li>Click on the create Free Tier Account link</li>
+        <li>Fill in your details</li>
+        <li>You will need to register a payment card.  This is so that if you go over your free tier Amazon charge you.  Do not worry about this if you follow the examples in this book nothing should cost any money.  Just remember to delete the infrastructure once you have finished with it.  Luckily Terraform can do this for you!</li>
+        <li>I recommend that you turn on 2FA for your newly created AWS log in</li>
+    </ol>
+
+    <h2 id="leanpub-auto-setup-an-aws-user-for-use-with-terraform" class="section">Setup an AWS user for use with Terraform</h2>
+
+    <p>We now need to create an AWS user that we can use with Terraform.  For the purposes of this book we are going to create an account which has administrator permissions.  This is not recommended for a production setup.  I cover best practices for AWS configuration later in the book.</p>
+
+    <ol>
+        <li>Log into your AWS account and you have access and go to the IAM section, you can do this by searching for <code>IAM</code> in the search box on the main AWS page and then clicking on the link</li>
+        <li>Select <code>Users</code> from the left hand menu</li>
+        <li>Select <code>Add User</code> at the top</li>
+        <li>Type in any username you like</li>
+        <li>For access type select <code>Programmatic access</code> only</li>
+        <li>Click <code>Next</code>
+        </li>
+        <li>On the set permissions screen select `</li>
+    </ol>
+    <p class="fake-para">Attach existing policies directly`</p>
+    <ol>
+        <li>Tick <code>AdministratorAccess</code> which should be the top of the list</li>
+        <li>Click <code>Next</code>
+        </li>
+        <li>Click <code>Next</code> again, now you should see a summary of the user you are about to create</li>
+        <li>Click the <code>Create User</code> button and the user should be created</li>
+        <li>Store the Access Key Id and Secret Access Key somewhere safe as this is the only time you will see them</li>
+    </ol>
+
+    <h2 id="leanpub-auto-setup-an-aws-credentials-file" class="section">Setup an AWS Credentials file</h2>
+
+    <p>The last thing we need to do is create an AWS Credentials file.  This is so that Terraform can get the programmatic credentials for the AWS user we created above.  </p>
+
+    <p>You need to create a file and with the following text, replacing the two placeholders with the access key id and secret access key you got from AWS when you created your admin user.</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code><code class="k">[default]</code>
+<code class="lineno">2 </code><code class="na">aws_access_key_id</code> <code class="o">=</code> <code class="s">&lt;access_key_id_here&gt;</code>
+<code class="lineno">3 </code><code class="na">aws_secret_access_key</code> <code class="o">=</code> <code class="s">&lt;secret_access_key_here&gt;</code>
+</pre></div>
+
+    </figure>
+
+
+    <p>Lastly save the file to the path given in the table below based on your OS:</p>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="text-align: left">OS</th>
+            <th style="text-align: left">Credentials file path</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td style="text-align: left">Windows</td>
+            <td style="text-align: left"><code>%UserProfile%/.aws/credentials</code></td>
+        </tr>
+        <tr>
+            <td style="text-align: left">Mac OS/Linux</td>
+            <td style="text-align: left"><code>~/.aws/credentials</code></td>
+        </tr>
+        </tbody>
+
+    </table>
+
+    <h2 id="leanpub-auto-install-jetbrains-intellij-community-edition" class="section">Install JetBrains IntelliJ Community Edition</h2>
+
+    <p>This last step is completely optional but I would highly recommend it.  JetBrains have an awesome IDE called IntelliJ and whats more they provide a free community edition.  The great thing about using the IntelliJ IDE is that you can install a plugin that gives you code completion, refactoring and navigation for Terraform files (<code>.tf</code> files).  This will make your life much easier when you are editing Terraform code.</p>
+
+    <p>To setup IntelliJ Community Edition for Terraform:</p>
+
+    <ol>
+        <li>Navigate to the JetBrains IntelliJ download page: https://www.jetbrains.com/idea/download/</li>
+        <li>Click on the <code>Community Edition</code> download button</li>
+        <li>Install it by running the download</li>
+        <li>Run IntelliJ and click on the <code>IntelliJ IDEA</code> Menu, select <code>Preferences</code>
+        </li>
+        <li>On the <code>Preferences</code> menu go to <code>Plugins</code>
+        </li>
+        <li>In the <code>Plugins</code> search box type <code>HCL</code>, there should be a plugin for <code>Hashicorp Markup Language Support</code>, click <code>Install</code> then click <code>Apply</code>
+        </li>
+        <li>IntelliJ will now be configured to understand Terraform files</li>
+    </ol>
+
+    <p>If you do not want to use IntelliJ that is absolutely cool feel free to use any text editor you wish.</p>
+
+
+
+</div>
+</body>
+</html>

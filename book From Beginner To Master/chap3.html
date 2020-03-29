@@ -1,0 +1,94 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 3 - Your First Terraform Project</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-3---your-first-terraform-project" class="chapter">Chapter 3 - Your First Terraform Project</h1>
+
+    <p>In this chapter we are going to create your first Terraform project.  We are not going to cover everything in great detail as we will circle back and cover it in more detail in later chapters.  I want the focus of this chapter to be about getting a feel for running Terraform and actually creating some infrastructure with it.</p>
+
+    <h2 id="leanpub-auto-code-samples" class="section">Code samples</h2>
+
+    <p>All of the code samples given in this book will be on github in the repository: https://github.com/kevholditch/terraform-beginner-to-master-examples.  </p>
+
+    <p>You can either type them in yourself from the book or feel free to clone the repo or just copy and paste them from github.  The examples are grouped into folders at the top level of the repository.  I will give the folder name of each sample as it is used.</p>
+
+    <h2 id="leanpub-auto-setting-up-your-first-project" class="section">Setting up your first project</h2>
+
+    <ol>
+        <li>Create a folder named <code>MyFirstTerraformProject</code> on your hard drive</li>
+        <li>Inside the folder create a file named <code>main.tf</code>
+        </li>
+        <li>Inside the file <code>main.tf</code> paste the following text (replace &lt;yourname&gt; with your name or something unique):</li>
+    </ol>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region = "eu-west-1"
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno">6 </code>  bucket = "&lt;yourname&gt;-first-bucket"
+<code class="lineno">7 </code>}
+</pre></div>
+
+    </figure>
+
+    <p class="fake-para">If you want to copy the code from the sample repository it is in the folder named <code>first_terraform_project</code></p>
+
+    <p>That’s all we need for our first Terraform project.  The Terraform code we have just written will create an S3 bucket in AWS with the name <code>&lt;yourname&gt;-first-bucket</code> in the region <code>eu-west-1</code>.  I reckon you could pretty much guess what it is going to even if you did not know Terraform.  That is one of the strong parts of Terraform in that the code is very readable and normally quite obvious what is going to happen.</p>
+
+    <p>Lets take a second to explain each part of the code in a bit more detail.  In the first 3 lines we are defining the provider that we want to use.  Terraform itself is just an engine that knows how to run a provider that conforms to an interface.  The Terraform engine is smart and knows how to create dependency trees and plans and it uses the provider to interface with the outside world.  As in this book we are going to be using Terraform with AWS we need to configure the AWS provider.</p>
+
+    <p>To configure the provider we use the keyword <code>provider</code> then follow it with the name of the provider in quotes in this case <code>"aws"</code>.  We start the provider block by opening a curly brace <code>{</code>.  We can now specify any parameters we want to configure the provider.  To pass a parameter you simply put the name of the parameter followed by an equals sign then the value you want to give the parameter in quotes, in our example we are setting the region this provider will use to be <code>eu-west-1</code>.  This is the region where the AWS Terraform provider will create all of the infrastructure we define.  We then end the provider block with a closing curly brace <code>}</code>.</p>
+
+    <p>The next block we have defined is a resource.  A resource in Terraform represents a thing in the real world.  In this case an S3 bucket.  To define a resource you start a resource block by using the keyword <code>resource</code>.  You then follow it with the resource you want to create in quotes.  We want to create an S3 bucket so we are using the S3 resource <code>"aws_s3_bucket"</code>.  If you are following along in IntelliJ and typing in the code you might have noticed that IntelliJ gave you a full list of possible resources once you started typing.  You can see the full list on the AWS provider page if you are interested: https://www.terraform.io/docs/providers/aws/index.html.  After we have specified the type of resource we want to create we then put another space and then the identifier you want to give that resource in quotes, in our example <code>"first_bucket"</code>.  We then open the block in the same way that we did for the provider block with an opening curly brace <code>{</code>.  Next we can give any parameters the resource takes values.  We are only setting the name of the bucket.  You then end the resource block with a closing <code>}</code>.</p>
+
+    <h2 id="leanpub-auto-creating-your-first-infrastructure-with-terraform" class="section">Creating your first infrastructure with Terraform</h2>
+
+    <p>The first thing you have to do with a new Terraform project is initialise Terraform for that project.  To do this go to your Terminal and cd into the folder where your project is, if you followed this guide exactly then cd into the folder named <code>MyFirstTerraformProject</code>.  Now run the following command:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>terraform init
+</pre></div>
+
+    </figure>
+
+
+    <p>You will see some output on the screen as Terraform initialises, then you should see the message <code>Terraform has been successfully initialized!</code>.  Once you have initialised Terraform you are now ready to create the infrastructure by running:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>terraform apply
+</pre></div>
+
+    </figure>
+
+
+    <p>After you run the <code>apply</code> you will see quite a lot of output from Terraform.  You will notice that the apply has paused and is awaiting a response from you.</p>
+
+    <p>Lets pause for a second and look at what is happening here.  By default when you run <code>terraform apply</code> Terraform will look at the code you have written and then compare it to the infrastructure that you currently have (in this case in AWS).  Once Terraform has done this it calculates a plan.  The plan is what Terraform is going to do to get the real infrastructure from where it is now to how you have specified you want it to be in code.  From looking at the plan we can see Terraform is saying if you do this it will create an S3 bucket.  You have told Terraform you want an S3 bucket and Terraform went to AWS to check and realised that there is not an S3 bucket in AWS with that name, so it knows that the plan it needs to do is create the bucket.  <i>Plans will be discussed in much more detail later in this book</i>.</p>
+
+    <p>The great thing about this plan is that Terraform presents it to us and then pauses and lets us decide whether we want to go ahead.  You can imagine how useful this is if you accidentally make a change that is going to destroy your database!  To get Terraform to make these changes and create the S3 bucket type <code>yes</code> and press enter.</p>
+
+    <p>Once the apply has finished you should see the message <code>Apply complete! Resources: 1 added, 0 changed, 0 destroyed.</code>.  This is Terraform telling you that it successfully created the S3 bucket for you.  Log onto the aws console (website), go to the S3 section and you will see the bucket that Terraform created.  Delete the bucket from the AWS console.  Now go back to the terminal and run <code>terraform apply</code> again.  You will notice that Terraform has worked out the S3 bucket is not there anymore so it needs to create it again.  At no point did you tell Terraform the bucket was gone, Terraform worked it out.  Confirm the apply (by typing <code>yes</code>) so the S3 bucket exists again.  Now run <code>terraform apply</code> again when the bucket is there.  You will see Terraform output <code>Apply complete! Resources: 0 added, 0 changed, 0 destroyed.</code>.  Terraform realises that the state of the world is exactly how you want it to be, so Terraform is saying “nothing to do here!”.  </p>
+
+    <p>To finish up lets destroy the infrastructure we created, don’t worry Terraform can take care of that for us.  Simply run the command <code>terraform destroy</code>.  Terraform will present a plan to you of what it is going to destroy and then pause so you can confirm.  Type <code>yes</code> and press enter.  When the destroy finishes you will see a message <code>Destroy complete! Resources: 1 destroyed.</code>.  This is telling you Terraform has successfully destroyed everything.  Log into the AWS console and go to S3 and you will see that the bucket is now gone.</p>
+
+    <p>That concludes our first experience with Terraform.  I hope that you can start to see the power that Terraform provides and how simple it is to use.  Feel free to play around with this project and try changing the properties like the name of the S3 bucket and see what happens.  That is a great way to learn.  Just remember to run <code>terraform destroy</code> when you are finished to ensure that you are not left with any infrastructure running in AWS.  </p>
+
+    <p>Do not worry if you had more questions about any of the steps we have just been through.  We are going to cover everything in much more detail.  I wanted to give you a taster for Terraform in action so you could see how powerful it is!</p>
+
+
+
+</div>
+</body>
+</html>

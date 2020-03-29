@@ -1,0 +1,188 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 1 - Introduction to Terraform</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-1---introduction-to-terraform" class="chapter">Chapter 1 - Introduction to
+        Terraform</h1>
+
+    <h2 id="leanpub-auto-what-is-terraform" class="section">What is Terraform?</h2>
+
+    <p>Terraform is a tool for building, changing, and versioning infrastructure safely and efficiently. It takes your
+        infrastructure you have defined in code and makes it real! The beauty of what Terraform does is that it does not
+        ask you how to get from the infrastructure you have to the infrastructure you want, it just asks you what you
+        want the world to look like and then it does the hard work.</p>
+
+    <p>If you are not very familiar with writing code then do not fret. The code that you have to write to configure
+        Terraform is quite different from normal imperative code in languages such as Java or C#. So you can forget
+        about classes and interfaces etc. Instead you can think of the code more as small blocks that represent
+        something in the real world and then a set of properties for that resource to configure it. For example you
+        create a block that represents an AWS EC2 instance and then you can set the properties to say the type of
+        instance you want and the AMI image you want. You do not need to tell Terraform how to do what you want or how
+        to get from what you have now to what you want as you would in an imperative language. All you have to do is
+        tell Terraform what you want and that’s it!</p>
+
+    <p>Let’s walk through a small example: </p>
+
+    <p>In your Terraform project you have defined that you want 4 AWS EC2 instances. If you currently have no EC2
+        instances then when you run Terraform then it will create 4 AWS EC2 instances for you. If you have 3 EC2
+        instances when you run Terraform then Terraform will only create 1 additional instance and leave the 3 you
+        already had. If you have 5 AWS EC2 Instances, Terraform will delete one. At no point does Terraform ask you how
+        many instances you currently had, Terraform figured it out and then created a plan on how to get from what you
+        have to what you want and then made it happen. This may seem trivial in this example but think about the power
+        that gives you when you extrapolate that out over a whole environment.</p>
+
+    <p>Now that we know what Terraform is, lets discuss some of the common problems that occur when you manage your
+        infrastructure by hand and don’t use Terraform.</p>
+
+    <h2 id="leanpub-auto-issues-with-configuring-infrastructure-manually" class="section">Issues with configuring
+        infrastructure manually</h2>
+
+    <p>How many times have you worked at a company where every environment (Dev, QAT, Staging, Production etc) has its
+        own personality. You try and test a feature on QAT and you hear “oh that never works on QAT we will have to
+        check that on staging” or “Production is the only environment with a load balancer so that’s why we never
+        spotted the bug before”. When humans are responsible for keeping environments in sync, things fall between the
+        cracks and the environments drift apart. It is also a lot of manual work to constantly apply changes to each
+        environment. Having environments with different infrastructure causes a number of issues such as you only find
+        bugs on a certain environment and make development hard as you are never testing against production like
+        infrastructure.</p>
+
+    <p>Configuring infrastructure manually is very error prone. If you want to try out a new infrastructure
+        configuration then you have to make the change to an environment by hand. If the change is what you want then
+        you have to remember what steps are involved to make the change and then manually apply them to all of your
+        other environments. If you do not like the change then you have to remember how to roll the environment back to
+        how it was. As the process is manual, often the changes are not made exactly the same to each environment which
+        is one of the reasons that environments end up differing and have their own personalities. </p>
+
+    <p>It is very time consuming to make the changes manually. If you have several environments and the change is quite
+        complex it can take days to roll that change to each environment.</p>
+
+    <p>Once you have an environment when you come to no longer need it destroying it can be very painful. For starters
+        you have to destroy the infrastructure in the correct order as often you cannot destroy a piece of
+        infrastructure if another piece depends on it. You end up becoming a human dependency tree calculator. After a
+        lot of pain you finally think that you have finished destroying the environment only to get a bill from your
+        cloud provider the following month for that piece of infrastructure that you accidentally left running.</p>
+
+    <h2 id="leanpub-auto-terraform-to-the-rescue" class="section">Terraform to the rescue</h2>
+
+    <p>Terraform solves all of these problems because your infrastructure is defined in code. The code represents the
+        state of your infrastructure. When your run Terraform against your code it will update your environment to be
+        exactly how you have specified it in code. Reproducible every time. The machine prospers where humans fail. All
+        of your environments are identical!</p>
+
+    <p>Terraform can make all of the changes to your environment very quickly. No longer do you have to wait for days
+        whilst someone follows the run book by hand. A change is made to the code, merged and then instantly can get
+        Terraform to update every environment simultaneously to include the new change.</p>
+
+    <p>As your infrastructure is now defined in code you can check it into source control. This means that you can make
+        a change to your code, roll it into an environment using Terraform and try it out. If the change is no good then
+        you can simply go back to the previous version of the code in source control and run Terraform again. Then
+        Terraform handles putting the environment back to how it was. If the change is good then you can check that into
+        source control and roll it into all of your other environments.</p>
+
+    <p>Having your infrastructure in code has another major benefit. You can now easily create multiple instances of the
+        same configuration (multiple environments). All of the instances can be created quickly and all will be
+        identical. Being able to create multiple identical environments is a big competitive advantage as it means that
+        each team can have their own environment, you could even have one per person if you wanted! You know that the
+        environment you are testing your software on is exactly the same as production. So there are no sudden surprises
+        due to environment drift!</p>
+
+    <p>Terraform is actually split into two parts. One part is the Terraform engine that knows how to get from the state
+        your infrastructure is currently in to how you want your infrastructure to be. The other part is the provider
+        which is the part that talks to the infrastructure to find out the current state and make the changes using the
+        infrastructure’s API. Due to the clever way Terraform is split there are providers available for just about
+        everything you can think of. Meaning you can use Terraform to configure infrastructure in AWS, Azure, GCP,
+        Oracle Cloud Platform and just about any other cloud you can think of. It can also be used to configure a huge
+        variety of other components that make up your environment such as Kong, Postgres, Runscope, Auth0, Couchbase,
+        TeamCity you name it there is probably a provider for it. Plus if there is not a provider for it then the really
+        cool part is that you can write your own and then use that in your project.</p>
+
+    <p>This means that in a single project you can configure multiple components and infrastructure that sits in
+        multiple clouds. All using the same language (HCL) and all in the same project sitting together. This is such a
+        powerful concept that you can define every aspect of your environment all in the same project and Terraform can
+        work out the order to run and configure each component for you so you do not have to worry about that.</p>
+
+    <p>Terraform uses a language called Hashicorp Markup Language or HCL as it known. HCL as you will see is a very
+        simple, easy to read syntax that is completely understandable even to someone looking at it for the first time.
+        This makes it straight forward to read through the code that defines the environment and work out what it is
+        going to do.</p>
+
+    <p>Terraform has a massive online community. Having a big online community means that help is never far away.
+        Chances are if you have a problem then you will be able to find the solution from the community. The community
+        also contribute to the providers which is a big reason as to why there is a provider for almost every service
+        you can think of. As the providers are often open source you can raise issues you find on the provider
+        repository and get answers on any issues from the provider author themselves. Often bugs and issues get fixed
+        quickly. You can even fix the provider yourself and run a local fixed build if you need the provider fixed
+        straight away. Due to the way providers are built and run they are normally very quick to encompass new changes
+        to an infrastructure API.</p>
+
+    <p>Terraform allows you to see what it is going to do (plan) and await your confirmation before it actually makes
+        any changes. This is a great safety net in case you made a change that you did not mean. It gives you an insight
+        into how Terraform will update your environment to match your desired state (we will cover Terraform plans in
+        much more detail in the book).</p>
+
+    <p>With Terraform you can destroy a whole environment and be guaranteed that you are left with nothing. Meaning no
+        more unwanted bill for that piece of infrastructure you forgot to delete. Terraform can calculate the dependency
+        order that infrastructure needs to be deleted in so that it can delete it in the correct order. All
+        automatically and very quickly.</p>
+
+    <p>Terraform has a solution if you already have infrastructure and you want to start using Terraform to manage it.
+        You can do this by importing your infrastructure into Terraform. This is great as it allows you to move your
+        infrastructure from being manually setup to being defined in code. </p>
+
+    <h2 id="leanpub-auto-why-not-just-use-cloudformation" class="section">Why not just use CloudFormation?</h2>
+
+    <p>As this book is going to use AWS for examples I thought it would be prudent to address the question: <i>Why use
+        Terraform over CloudFormation?</i> As CloudFormation is an infrastructure as code tool that is doing the same
+        job and it is written by Amazon themselves so surely it is better? Well not exactly. There are a number of
+        reasons why Terraform is a much better choice than CloudFormation for your project.</p>
+
+    <p>Terraform is open source and generally moves faster than CloudFormation. Even though CloudFormation is produced
+        by Amazon it can still take a while for a new AWS feature to appear in CloudFormation believe it or not! Whereas
+        the community are amazing at keeping Terraform up to date. This is aided by the fact that each Terraform
+        provider (think of that as a plugin to manage a certain vendor or component) is a separate binary that gets
+        deployed at its own speed (we will cover providers in detail later in the book). </p>
+
+    <p>CloudFormation uses JSON or YAML for configuration. Both of these formats are flawed in my view for different
+        reasons. JSON can be quite tricky to read when you have a big object and fiddly to get right due to all of the
+        curly braces. JSON does not allow comments either which means if you want to put a note on something to explain
+        it then you cannot do that. YAML does allow comments and is a bit less verbose than JSON. The big downside of
+        YAML (and anyone that has used it will contest to this) is that YAML is very very fussy about correct
+        indentation. It can have you pulling your hair out trying to get right. If you want to remove a block in the
+        middle of your YAML file it is a nightmare trying to get the indentation correct again. YAML is also hard to
+        follow when you have a large file. It is hard to read it as a human quickly and work out what is going on. </p>
+
+    <p>Terraform uses HCL, which has a clean concise syntax. It is very easy to read, allows comments (both inline and
+        block) and is not fussy about spacing, newlines or indentation. That is not to say you cannot use a formatter or
+        an IDE to get it looking neat, it is just that it is not a syntax error if you add an extra space as it can be
+        with YAML. Using HCL you can easily split your project up into multiple files as you see fit. To make the code
+        easier to read and understand when coming to the project.</p>
+
+    <p>The killer feature that makes Terraform the obvious choice over CloudFormation is that you can use Terraform to
+        configure all of your infrastructure whereas you can only use CloudFormation for AWS. This means that you can
+        have one tool and project to manage all of your infrastructure. Even if your infrastructure is made up of
+        several components and split across multiple clouds. You can even write your own Terraform provider if you want
+        to configure something that is not currently supported by Terraform. Meaning that you can use Terraform to
+        configure absolutely everything. If you are using CloudFormation then if you want to configure anything other
+        than AWS then you have to use a different tool for that.</p>
+
+    <h2 id="leanpub-auto-what-about-chef-and-puppet-dont-they-solve-this-problem" class="section">What about Chef and
+        Puppet, don’t they solve this problem?</h2>
+
+    <p>Chef and Puppet are configuration management tools. They are designed to configure and manage software that is
+        running on a machine (infrastructure) that already exists. Whereas Terraform sits at the abstraction layer above
+        that and is designed to setup all of the infrastructure that make up your system such as load balancers,
+        servers, DNS records etc. </p>
+
+    <p>As a small aside it is possible to configure software already running on a machine through Terraform using
+        provisioners but this should be used with caution and it is best to leave this type of configuration to
+        specialised tools like Puppet and Chef. <i>Provisioners and their use case will be covered later in the book</i>.
+    </p>
+
+
+</div>
+</body>
+</html>
