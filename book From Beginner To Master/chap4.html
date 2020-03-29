@@ -1,0 +1,172 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 4 - Resources</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-4---resources" class="chapter">Chapter 4 - Resources</h1>
+
+    <h2 id="leanpub-auto-resources-in-detail" class="section">Resources in detail</h2>
+
+    <p>Resources in Terraform represent a thing in the real world.  For example a resource could be an AWS Load Balancer, an alarm in PagerDuty, a policy in Vault, the list is pretty much endless.  The resource is the bedrock of Terraform.  It allows you to define how you want to create something in the real world.  Remember you can create resources that represent things from multiple vendors (for example multiple clouds) in a single project.</p>
+
+    <p>Lets take a look in a bit more detail at the resource we defined in the previous chapter:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno">2 </code>  bucket = "&lt;yourname&gt;-first-bucket"
+<code class="lineno">3 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>The resource type <code>aws_s3_bucket</code> starts with the name of the provider followed by an underscore (<code>aws_</code>).  This allows you to tell just from the first word of the resource which vendor or component this resource will be created in.  Lets take a look at a few other examples:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "google_folder" "department" {
+<code class="lineno">2 </code>  display_name = "Department"
+<code class="lineno">3 </code>  parent     = "organisation/1234567"
+<code class="lineno">4 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>The <code>department</code> resource above will create a folder in Google Cloud (GCP).  You can see that it starts with <code>google_</code> which is the name of the Google Cloud (GCP) provider.  Every resource for this provider will start with <code>google_</code>.</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "postgresql_role" "my_role" {
+<code class="lineno">2 </code>  name     = "my_role"
+<code class="lineno">3 </code>  login    = true
+<code class="lineno">4 </code>  password = "password123"
+<code class="lineno">5 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>The <code>my_role</code> resource above will create a login on a Postgres database, with log in name <code>my_role</code> and password <code>password123</code>.  The resource name starts <code>postgresql_</code> as will every resource for the Postgres provider.</p>
+
+    <p>If we look back at our S3 bucket resource the last word on the line in quotes was <code>"first_bucket"</code>.  This is the identifier for that S3 bucket within your Terraform project.  The identifier is what we use inside our project to refer to an instance of a resource.  You can create multiple instances of the same resource for example you could create many S3 buckets.  The identifier gives you a way to reference each one.  </p>
+
+    <p>The key name value pairs that make up the body of the resource are the properties for the resource.  Some properties on the resource are mandatory and some are optional.  For an AWS S3 bucket the only mandatory property is the name of the bucket.  We could have set more properties on the bucket for example:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno">2 </code>  bucket = "kevholditch-first-bucket"
+<code class="lineno">3 </code>  acl    = "private"
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>  versioning {
+<code class="lineno">6 </code>    enabled    = true
+<code class="lineno">7 </code>    mfa_delete = false
+<code class="lineno">8 </code>  }
+<code class="lineno">9 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>In the above example (which you can find in the repository folder <code>resources_example_01</code> if you want to copy the code across) we are setting the acl to <code>private</code> which is basically saying that this bucket will only allow private access.  We are also setting two properties for versioning, one to say we are enabling versioning and another to say that you do not require MFA to delete an item on this bucket.  With the properties for versioning you will notice that these are nested in another object.  This is a design choice by the resource creator that groups all of the versioning properties together.  You may also notice that the two properties in the versioning section are booleans (<code>true/false</code>).  These do not require quotes around them like strings do as we have used for the other two properties.</p>
+
+    <p>You can get a full list of all of the properties that are supported from the Terraform provider documentation page, for an S3 bucket it is: https://www.terraform.io/docs/providers/aws/r/s3_bucket.html.  You can find the documentation quite easily on Google.</p>
+
+    <p>Lets take a look at another resource type so we can examine the other data types that resources can take in their properties:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_security_group" "my_security_group" {
+<code class="lineno">2 </code>  name        = "allow_tls"
+<code class="lineno">3 </code>  ingress {
+<code class="lineno">4 </code>    protocol    = "tcp"
+<code class="lineno">5 </code>    from_port   = 443
+<code class="lineno">6 </code>    to_port     = 443
+<code class="lineno">7 </code>    cidr_blocks = ["10.0.0.0/16", "11.0.0.0/16"]
+<code class="lineno">8 </code>  }
+<code class="lineno">9 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>In the resource above we have the two other types of data resources can take numbers and lists. The port properties (<code>from_port</code> and <code>to_port</code>) are numbers, these are set by just providing the value with no quotes.  <code>cidr_blocks</code> is a list type, it takes a list of CIDR blocks to restrict for this security group to.  You can see that a list is given in the same way a JSON array of strings is created where you surround it in square braces.</p>
+
+    <h2 id="leanpub-auto-interpolation-syntax" class="section">Interpolation syntax</h2>
+
+    <p>Once a resource is created it returns a bunch of attributes.  The attributes a resource returns can be found in the <code>Attributes Reference</code> section on the documentation page for any resource.  This is amazingly useful as it allows you to use the output from one resource as the argument to another resource.</p>
+
+    <p>Consider the following project (which can be found in same repository in the folder <code>resources_example_02</code>).  If you do not want to copy from the example repository then create a new folder, create a single file in the folder called <code>main.tf</code> and place the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region = "eu-west-1"
+<code class="lineno"> 3 </code>}
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>resource "aws_vpc" "my_vpc" {
+<code class="lineno"> 6 </code>  cidr_block = "10.0.0.0/16"
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>resource "aws_security_group" "my_security_group" {
+<code class="lineno">10 </code>  vpc_id = aws_vpc.my_vpc.id
+<code class="lineno">11 </code>  name   = "Example security group"
+<code class="lineno">12 </code>}
+<code class="lineno">13 </code>
+<code class="lineno">14 </code>resource "aws_security_group_rule" "tls_in" {
+<code class="lineno">15 </code>  protocol          = "tcp"
+<code class="lineno">16 </code>  security_group_id = aws_security_group.my_security_group.id
+<code class="lineno">17 </code>  from_port         = 443
+<code class="lineno">18 </code>  to_port           = 443
+<code class="lineno">19 </code>  type              = "ingress"
+<code class="lineno">20 </code>  cidr_blocks       = ["0.0.0.0/0"]
+<code class="lineno">21 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>This project creates an AWS VPC with CIDR block <code>10.0.0.0/16</code>. Then it defines a security group (<code>aws_security_group</code>).  In the definition of the security group notice that the value of <code>vpc_id</code> is set to <code>aws_vpc.my_vpc.id</code>.  The value of <code>aws_vpc.my_vpc.id</code> is not known before we run the project as AWS will randomly assign it when we create the VPC.  By referencing the VPC we created it allows us to use this value even though we do not know what it will be until we run the project.  </p>
+
+    <p>The format of using an output attribute from a resource is <code>&lt;resource_type&gt;.&lt;resource_identifier&gt;.&lt;attribute_name&gt;</code>.  In the VPC id example we are getting the output from an <code>aws_vpc</code> resource type, with the identifier name <code>my_vpc</code> and we want to get the <code>id</code> attribute value.  So hence we end up with <code>aws_vpc.my_vpc.id</code>.  It is worth noting here that this syntax was greatly simplified in Terraform version <code>0.12</code>.  Which is the syntax all of the examples in this book will be using.</p>
+
+    <p>Next in our project we define a security group rule (<code>aws_security_group_rule</code>) to allow ingress traffic on port 443.  In the <code>aws_security_group_rule</code> we need to reference the id of the security group that we want to put this rule in.  We can use the same technique as we did when we referenced the id of the VPC.  Lets work through how to figure this out together.  It will start with the type of the resource we want to reference <code>aws_security_group</code>.  Next we use the identifier to specify which instance of the security group we want to use which is <code>my_security_group</code>.  Lastly we use the attribute of that property we want to use, which is <code>id</code>.  This leads use to build the expression <code>aws_security_group.my_security_group.id</code> which we can use for the value of the property <code>security_group_id</code> inside the <code>aws_security_group_rule</code> resource.</p>
+
+    <p>The neat thing about using interpolation syntax to reference the attribute of a resource in another resource is that it allows Terraform to work out the dependency order of the resources.  From our HCL above Terraform can determine that first it needs to create the VPC because it needs the id that AWS assigns to the VPC in order to create the security group.  It then knows that it needs to create the security group next as it needs the id of the security group in order to create the security group rule.  Terraform uses this information to build up a dependency graph and then tries to run in parallel as much as possible. </p>
+
+    <p>To illustrate the way Terraform can create a project in parallel consider what happens when we add a new security group rule to our project above (folder <code>resources_example_03</code> in the example repository).</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_security_group_rule" "http_in" {
+<code class="lineno">2 </code>  protocol          = "tcp"
+<code class="lineno">3 </code>  security_group_id = aws_security_group.my_security_group.id
+<code class="lineno">4 </code>  from_port         = 80
+<code class="lineno">5 </code>  to_port           = 80
+<code class="lineno">6 </code>  type              = "ingress"
+<code class="lineno">7 </code>  cidr_blocks       = ["0.0.0.0/0"]
+<code class="lineno">8 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>When you run the project now with Terraform, it will realise that it can create both security group rules in parallel.  Once the security group they both depend on is created, it will be able to create both of the rules together.  This feature of Terraform makes performance very good.  It may seem quite obvious in this example but as a project grows it can be quite impressive at how much Terraform can run in parallel.</p>
+
+
+
+</div>
+</body>
+</html>

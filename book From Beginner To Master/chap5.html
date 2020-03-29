@@ -1,0 +1,224 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 5 - Providers</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-5---providers" class="chapter">Chapter 5 - Providers</h1>
+
+    <h2 id="leanpub-auto-providers-in-detail" class="section">Providers in detail</h2>
+
+    <p>A provider in Terraform is a connection that allows Terraform to manage infrastructure using a pre defined
+        interface. This abstraction is very powerful as it means the Terraform engine which understands how to read
+        state from a provider, read HCL code and then work out how to get to the desired state, is completely separate
+        from the provider. It allows anyone to write a provider to connect to anything (as long as there is a
+        programmable way to talk to it). All the provider writer has to do for each resource they want to allow
+        Terraform to control is provide Terraform with a way to create it, read it and delete it. <b>Note update is
+            actually optional as Terraform can always delete and then create the resource if update is not provided</b>.
+    </p>
+
+    <p>Due to the provider model that Terraform employs, providers are not part of the main Terraform source code. They
+        are separate binaries that live in their own repositories and can move at their own speed. This means that if a
+        provider needs to release a bug fix or new feature they can just release it. They do not need to coordinate a
+        release of the main Terraform code base.</p>
+
+    <p>A provider is defined using a provider block. You have already used a provider block in the examples so far in
+        this book, it looks like:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region = "eu-west-1"
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The provider block is very simple it starts with the keyword <code>provider</code> to indicate that this is a
+        provider block. You then have to give the name of the provider that you are using. In this case we are using the
+        <code>aws</code> provider so we put <code>"aws"</code>. You then use a <code>{</code> to open the provider
+        block. Inside the provider block you can put all of the configuration you want for the provider. For the AWS
+        provider the only property that we are configuring is the region. This will be the region that we are going to
+        create our AWS resources in. You then end the provider block with a closing <code>}</code>.</p>
+
+    <p>Create a new folder and inside that folder create a file called <code>main.tf</code> and place only the above
+        provider block in that file (folder <code>providers_example_01</code> in the example repository if you want to
+        copy the code). Go to the command line and navigate to the new project that you created and run <code>terraform
+            init</code>. You will notice that Terraform downloads the AWS provider automatically, you will see <code>Downloading
+            plugin for provider "aws" (hashicorp/aws) 2.27.0...</code>. You may be wondering how that happens? Hashicorp
+        (the company who make Terraform) host a registry which contains the most popular providers. If the provider that
+        you use is in the registry then all you have to do to use it is define a provider block that sets up that
+        provider and run <code>terraform init</code> to download it. You can see a full list of providers that are in
+        the registry on the Hashicorp Terraform site: https://www.terraform.io/docs/providers/index.html. </p>
+
+    <p>You may be wondering where Terraform puts this provider? It puts it inside the project where you are currently
+        working in a special folder called <code>.terraform</code>. The relative path on my Macbook to the AWS provider
+        that gets downloaded when I run <code>terraform init</code> is <code>.terraform/plugins/darwin_amd64/terraform-provider-aws_v2.27.0_x4</code>.
+        The platform part (3rd folder in) may vary for you depending on the platform you are running on. The provider is
+        actually a separate binary which Terraform calls out to at run time to do its work. As an interesting aside the
+        name of the provider binary is always in the format <code>terraform-provider-&lt;NAME&gt;_vX.Y.Z</code>.
+        Terraform uses this convention to search for providers on your machine, so that it knows if you have a
+        particular version of a provider when you run <code>terraform init</code>. It uses this information to know
+        whether or not to download it.</p>
+
+    <h2 id="leanpub-auto-provider-best-practices" class="section">Provider best practices</h2>
+
+    <p>When you ran <code>terraform init</code> you may have noticed the warning message that Terraform printed out
+        where it said that it recommends that you use a version constraint on the provider.</p>
+
+    <p>To fix this create a new Terraform project by creating a new folder and creating a single file called <code>main.tf</code>
+        and placing the following code inside (or grab the code inside <code>providers_example_02</code> from the
+        examples repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region  = "eu-west-1"
+<code class="lineno">3 </code>  version = "~&gt; 2.27"
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Go to your terminal and go into the folder you have created and run <code>terraform init</code>. You will see
+        that Terraform downloads the AWS provider but this time there will not be a warning given about the version
+        constraint. The version constraint <code>~&gt; 2.27</code> means any minor version higher is ok to upgrade to
+        but no major version and no beta versions. It effectively means any version up to but not including
+        <code>3.0.0</code> is ok. Every time you run <code>terraform init</code> Terraform will go up to the registry
+        and check what the latest version is of all of the providers you have defined. It will then look on your machine
+        and see what version you have installed. If you have no version constraint on the provider then you are saying
+        to Terraform that you always want Terraform to download the latest version. This can be dangerous (as the
+        warning message tells you) as it will mean that Terraform will get the latest version even if it is a major
+        version update which means it will contain breaking changes. Therefore you should always use a version
+        constraint on the provider to ensure that Terraform will not upgrade the provider to a new major version. Minor
+        version updates are ok as they will not contain a breaking change. So in our example if version <code>2.3</code>
+        gets released Terraform will upgrade our project to that version of the provider when we next run <code>terraform
+            init</code>.</p>
+
+    <p>The general advice is to use <code>~&gt; X.YY</code> notation for your provider. Which will give the semantics
+        described above, which is generally what you want. If you are unsure of what to specify then leave off the
+        version parameter, run <code>terraform init</code>. Once Terraform downloads the provider it will tell you what
+        version it has downloaded in the output. Then put the version of the provider it has downloaded after <code>~&gt;</code>
+        in the version constraint.</p>
+
+    <p>Terraform is quite flexible on what you can do with the version constraint as the below list shows:</p>
+
+    <ul>
+        <li>
+            <code>&gt;= 1.2.0</code>: version 1.2.0 or newer
+        </li>
+        <li>
+            <code>&lt;= 1.2.0</code>: version 1.2.0 or older
+        </li>
+        <li>
+            <code>~&gt; 1.2.0</code>: any non-beta version &gt;= 1.2.0 and &lt; 1.3.0, e.g. 1.2.X
+        </li>
+        <li>
+            <code>~&gt; 1.2</code>: any non-beta version &gt;= 1.2.0 and &lt; 2.0.0, e.g. 1.X.Y
+        </li>
+        <li>
+            <code>&gt;= 1.0.0</code>, &lt;= 2.0.0: any version between 1.0.0 and 2.0.0 inclusive
+        </li>
+    </ul>
+
+    <h2 id="leanpub-auto-more-than-one-instance-of-the-same-provider" class="section">More than one instance of the same
+        provider</h2>
+
+    <p>On the AWS provider as <code>region</code> is a required parameter you may be wondering how you create resources
+        in different regions and if that is possible in a single Terraform project? Well yes it is. To do this you
+        simply create multiple instances of the same provider. </p>
+
+    <p>Create a Terraform project on your machine by creating a new folder and creating a single file in that folder
+        called <code>main.tf</code> (or grab the project from the <code>providers_example_03</code> folder in the
+        examples repository), then copy in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>provider "aws" {
+<code class="lineno"> 7 </code>  region  = "eu-west-2"
+<code class="lineno"> 8 </code>  alias   = "london"
+<code class="lineno"> 9 </code>  version = "~&gt; 2.27"
+<code class="lineno">10 </code>}
+<code class="lineno">11 </code>
+<code class="lineno">12 </code>resource "aws_vpc" "ireland_vpc" {
+<code class="lineno">13 </code>  cidr_block = "10.0.0.0/16"
+<code class="lineno">14 </code>}
+<code class="lineno">15 </code>
+<code class="lineno">16 </code>resource "aws_vpc" "london_vpc" {
+<code class="lineno">17 </code>  cidr_block = "10.1.0.0/16"
+<code class="lineno">18 </code>  provider   = "aws.london"
+<code class="lineno">19 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>As you can see we are defining two instances of the AWS provider. The once pointing at the region
+        <code>eu-west-1</code> and once at the region <code>eu-west-2</code>. For the one that is pointing at <code>eu-west-2</code>
+        you will notice that we are setting the <code>alias</code> property to <code>london</code>. Alias is a property
+        you can set on any provider block, it is no way special to the aws provider. What this gives us is a way to
+        distinguish between the two providers. Once you define two or more instances of the same provider every
+        definition after the first must have an alias set.</p>
+
+    <p>After we have defined the two AWS providers we are creating a VPC called <code>ireland_vpc</code>, with the CIDR
+        block <code>10.0.0.0/16</code>. As we have not told Terraform which provider instance to use for this resource
+        Terraform will pick the instance of the AWS provider where you have not defined an alias. Which means that this
+        VPC will be created in the region <code>eu-west-1</code> (Ireland). The second VPC we have defined with the
+        identifier <code>london_vpc</code> has a CIDR block of <code>10.1.0.0/16</code>. This time we have set the
+        <code>provider</code> property on the resource to <code>aws.london</code>. This means that terraform will use
+        our second AWS provider which points to the region <code>eu-west-2</code>, so when we run the project by doing
+        <code>terraform apply</code> this VPC will be created in <code>eu-west-2</code>.</p>
+
+    <p>Every resource has a <code>provider</code> property that you can set. The format of the value is set by <code>&lt;provider_name&gt;.&lt;provider_alias&gt;</code>.
+        For our example when we created the VPC in london we were using the AWS provider and the alias was london hence
+        we set the provider property to <code>aws.london</code>. </p>
+
+    <p>You be wondering if there is a way to explicitly tell Terraform to use the default provider even though you do
+        not need to. To do that you can set the <code>provider</code> property to the provider name. So for example we
+        could have defined the <code>ireland_vpc</code>:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_vpc" "ireland_vpc" {
+<code class="lineno">2 </code>  cidr_block = "10.0.0.0/16"
+<code class="lineno">3 </code>  provider   = "aws"
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>This would have given us exactly the same output. Due to this being extra code for no added value no one in the
+        community writes their HCL in this way. Less is more, and it is cleaner and easier to read if you omit the
+        provider property when using the default provider instance.</p>
+
+    <p>To run the above project go to a terminal and change into the directory where you have placed the
+        <code>main.tf</code> file. Run <code>terraform init</code> to initialise the project and download the AWS
+        provider. Next run <code>terraform apply</code> then confirm by typing <code>yes</code> and pressing enter. This
+        will create the two VPCs, one in <code>eu-west-1</code> and one in <code>eu-west-2</code>. Log into the AWS
+        Console and navigate to find the VPC section. Switch into the <code>eu-west-1</code> and <code>eu-west-2</code>
+        regions and you will see the VPCs that Terraform created. Once you are done with the project do not forget to
+        run <code>terraform destroy</code> and then confirm with <code>yes</code> to delete all of the resources in this
+        project.</p>
+
+
+</div>
+</body>
+</html>
