@@ -1,0 +1,122 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 6 - Data Sources</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-6---data-sources" class="chapter">Chapter 6 - Data Sources</h1>
+
+    <h2 id="leanpub-auto-data-sources-in-detail" class="section">Data sources in detail</h2>
+
+    <p>A data source in Terraform is used to fetch data from a resource that is not managed by the current Terraform
+        project, so that value can be used in the current Terraform project. You can sort of think of it as a read only
+        resource that already exists. The object exists but you want to read some properties of that object for use in
+        your project.</p>
+
+    <p>Lets dive into an example. Create a new folder on disk, create a file called <code>main.tf</code> inside it and
+        paste in the following code (or grab the code from the folder <code>data_source_example_01</code> in the samples
+        repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>data "aws_s3_bucket" "bucket" {
+<code class="lineno"> 7 </code>  bucket = "kevholditch-already-exists"
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>resource "aws_iam_policy" "my_bucket_policy" {
+<code class="lineno">11 </code>  name = "my-bucket-policy"
+<code class="lineno">12 </code>
+<code class="lineno">13 </code>  policy = <code class="err">&lt;</code><code class="nt">&lt;POLICY</code>
+<code class="lineno">14 </code><code class="err">{</code>
+<code class="lineno">15 </code>  <code class="err">"Version":</code> <code class="err">"2012-10-17",</code>
+<code class="lineno">16 </code>  <code class="err">"Statement":</code> <code class="err">[</code>
+<code class="lineno">17 </code>    <code class="err">{</code>
+<code class="lineno">18 </code>      <code class="err">"Action":</code> <code class="err">[</code>
+<code class="lineno">19 </code>        <code class="err">"s3:ListBucket"</code>
+<code class="lineno">20 </code>      <code class="err">],</code>
+<code class="lineno">21 </code>      <code class="err">"Effect":</code> <code class="err">"Allow",</code>
+<code class="lineno">22 </code>      <code class="err">"Resource":</code> <code class="err">[</code>
+<code class="lineno">23 </code>        <code class="err">"${data.aws_s3_bucket.bucket.arn}"</code>
+<code class="lineno">24 </code>      <code class="err">]</code>
+<code class="lineno">25 </code>    <code class="err">}</code>
+<code class="lineno">26 </code>  <code class="err">]</code>
+<code class="lineno">27 </code><code class="err">}</code>
+<code class="lineno">28 </code><code class="err">POLICY</code>
+<code class="lineno">29 </code><code class="err">}</code>
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>As you can see from the above project a data source block starts with the word <code>data</code>. The next word
+        is the type of data source. We are using a <code>aws_s3_bucket</code> data source, which is used to look up an
+        S3 bucket. After the data source type, we give the data source an identifier in this case <code>"bucket"</code>.
+        The identifier is used to reference the data source inside the Terraform project. The data source block is then
+        opened with a <code>{</code>. You then specify any properties you want Terraform to use to search for the
+        resource. We are using the complete name of the S3 bucket we are looking for. You then close the data source
+        block with <code>}</code>.</p>
+
+    <p>Rather than creating the bucket as we did before this time we are referencing a bucket that already exists. So
+        before you run the above project you will need to create an S3 bucket with the name that you specify inside the
+        data block. In the example above the bucket would be called <code>kevholditch-already-exists</code>. Name the
+        bucket anything you want but then paste the name into the <code>bucket</code> property in the data source.</p>
+
+    <p>At the bottom of this project we are creating an AWS IAM policy which gives permissions to list the bucket that
+        we looked up in the data source. There are a couple of new concepts in the <code>aws_iam_policy</code> resource
+        that I want to introduce. The IAM policy itself is a multi line string enclosed in between
+        <code>&lt;&lt;POLICY</code> and <code>POLICY</code>. This is how you define a multi line string in Terraform.
+        You open the multi line string with <code>&lt;&lt;</code> then you place any identifier you wish as a single
+        word. I have used <code>POLICY</code> in the example above as I am defining an IAM policy but you could have
+        used anything like <code>&lt;&lt;STATEMENT</code> or <code>&lt;&lt;IAM</code>. You then start your multi line
+        string on the next line and to finish it you use the opening identifier without the <code>&lt;&lt;</code>. <i>Note
+            the closing marker must be at the start of a new line otherwise it is a syntax error.</i></p>
+
+    <p>Inside the IAM policy we are using the S3 bucket data source. We are taking the arn from the S3 bucket so that we
+        can use it in our IAM policy. You will notice that to get the value we are using the interpolation syntax <code>${data.aws_s3_bucket.bucket.arn}</code>.
+        The opening <code>${</code> and closing <code>}</code> is needed because we are inside a multi line string so it
+        is telling terraform that we want it to evaluate the value of this and not use it as a string literal. The
+        format of a data source expression is <code>data.&lt;data_type&gt;.&lt;data_identifier&gt;.&lt;attribute_name&gt;</code>.
+        You can get a full list of the attributes that a data resource provides from the documentation website of the
+        provider.</p>
+
+    <p>To run this project go to the terminal and cd into the folder where you created the <code>main.tf</code> file.
+        Run <code>terraform init</code> to initialise Terraform and then <code>terraform apply</code>. When Terraform
+        runs you will see that it only created a single resource, the IAM policy. This is because the S3 bucket we are
+        using is created outside of Terraform.</p>
+
+    <h2 id="leanpub-auto-how-are-data-sources-useful" class="section">How are data sources useful?</h2>
+
+    <p>As your Terraform project gets large it can be sensible to break it up into smaller projects to make it easier to
+        maintain. When this happens you can use data sources to reference resources created in other Terraform projects
+        and still use them. In this case it would always be better to use a data source than to compute the arn yourself
+        which would be possible with something like an S3 bucket. This is because you want Terraform to fail if for some
+        reason the bucket no longer exists. By using a data source you get this behaviour. </p>
+
+    <p>Imagine you want to create a new AWS EC2 instance using an AMI image from a private repository. You could hard
+        code the name of the AMI image when creating the instance and then manually update it when a new AMI image is
+        released. This would work but it would be quite cumbersome and would require a code change every time you wanted
+        to use the latest version of the AMI image. By using a data source you could set it up so that it always reads
+        the repository and gets the latest version of the AMI image when you run Terraform. You could then reference
+        that data source when creating the EC2 instance and ensure that you always have the latest version of the
+        image.</p>
+
+    <p>Another reason you may want to use a data source is if you are migrating existing infrastructure to Terraform and
+        you want to reference a resource that is not part of your Terraform project yet. As previously stated it is
+        always better to use a data source rather than compute the value yourself. You want Terraform to know that there
+        is a dependency on the resource. As you want your Terraform apply to fail if the resource cannot be found or if
+        the attribute it returns changes then Terraform will realise when you run apply and update your project with the
+        new value.</p>
+
+
+</div>
+</body>
+</html>
