@@ -1,0 +1,874 @@
+html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 9 - Templates and Files</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-9---templates-and-files" class="chapter">Chapter 9 - Templates and Files</h1>
+
+    <h2 id="leanpub-auto-files" class="section">Files</h2>
+
+    <p>We have seen in a previous chapter how you can place a multi line string as a value for a property. This is
+        useful for something like an IAM policy. It can be even cleaner to move the value out into a file and then
+        reference that file from your project. Doing this can remove the clutter from your project and make it much more
+        readable.</p>
+
+    <p>Lets see an example of using files, create a new folder, create a file called <code>main.tf</code> (or copy the
+        code from the folder <code>file_example_01</code> in the examples repository) and paste in the following code:
+    </p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region  = "eu-west-1"
+<code class="lineno">3 </code>  version = "~&gt; 2.27"
+<code class="lineno">4 </code>}
+<code class="lineno">5 </code>
+<code class="lineno">6 </code>resource "aws_iam_policy" "my_bucket_policy" {
+<code class="lineno">7 </code>  name = "list-buckets-policy"
+<code class="lineno">8 </code>  policy = file("./policy.iam")
+<code class="lineno">9 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Next if you are creating the code yourself, create another file called <code>policy.iam</code> and paste in:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>{
+<code class="lineno"> 2 </code>  "Version": "2012-10-17",
+<code class="lineno"> 3 </code>  "Statement": [
+<code class="lineno"> 4 </code>    {
+<code class="lineno"> 5 </code>      "Action": [
+<code class="lineno"> 6 </code>        "s3:ListBucket"
+<code class="lineno"> 7 </code>      ],
+<code class="lineno"> 8 </code>      "Effect": "Allow",
+<code class="lineno"> 9 </code>      "Resource": "*"
+<code class="lineno">10 </code>    }
+<code class="lineno">11 </code>  ]
+<code class="lineno">12 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>This IAM policy creates a policy that gives list bucket permission to any bucket. If you look at the Terraform
+        code you will see we are configuring the AWS provider as we are going to be connecting to AWS. Then we are
+        defining an AWS IAM policy. Instead of placing the policy inline as we did in a previous chapter, we are
+        referencing the policy from the file <code>policy.iam</code>. To do this we are calling the <code>file</code>
+        function and passing in the argument as to where the file is. <i>Note this is a relative file path from our
+            current location</i>.</p>
+
+    <p>When we run this project by doing <code>terraform init</code> and <code>terraform apply</code> and confirm by
+        typing <code>yes</code>, Terraform will create the IAM policy you can see in the file and name it <code>list-buckets-policy</code>.
+    </p>
+
+    <h2 id="leanpub-auto-templatefile-function" class="section">Templatefile function</h2>
+
+    <p>Sometimes we want to use a file but we do not know all of the values before we run the project or some of the
+        values are dynamic and generated as a result of a created resource. To be able to use dynamic values in a file
+        we need to use the <code>templatefile</code> function. </p>
+
+    <p>The <code>templatefile</code> function allows you to define placeholders in a template file and then pass their
+        values at runtime.</p>
+
+    <p>Lets dive into a simple example to see how it works… Create a new folder and create a file called
+        <code>main.tf</code> (or copy the <code>templatefile_example_01</code> folder from the examples repository) and
+        paste in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>locals {
+<code class="lineno">2 </code>  rendered = templatefile("./example.tpl", { name = "kevin", number = 7})
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>output "rendered_template" {
+<code class="lineno">6 </code>  value = local.rendered
+<code class="lineno">7 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Next if you are creating the code yourself and not using the examples repository then create another file in the
+        directory called <code>example.tpl</code> and place the following text:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>hello there <code
+                class="cp">${</code><code class="n">name</code><code class="cp">}</code>
+<code class="lineno">2 </code>there are <code class="cp">${</code><code class="n">number</code><code class="cp">}</code> things to say
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Lets walk through the code we have written so we can understand what is going on. We are defining a local (as we
+        learnt in the previous chapter) called <code>rendered</code>. We are setting the value of the local (remember a
+        local can have a value that is an expression) to the result of calling the <code>templatefile</code> function.
+        The template file function takes two arguments. The first argument is the path to the template file, in this
+        example we are using the relative path between the <code>main.tf</code> and the template file
+        <code>example.tpl</code> so the path is <code>./example.tpl</code>. The next parameter is a set of variables
+        that you want replacing in your template. We are passing in a value for <code>name</code> (<code>kevin</code>)
+        and <code>number</code> (<code>7</code>). <i>Note you could set the value of these variables to any expression
+            such as another local or an attribute from a created resource or a data source.</i></p>
+
+    <p>If you look at the example template code we use the syntax <code>${&lt;variable_name&gt;}</code> when we want to
+        reference a passed in variable. Terraform will replace <code>${name}</code> in our template with the value
+        passed in for <code>name</code>, it will do the same with <code>${number}</code>.</p>
+
+    <p>We are then using an <code>output</code> to output the rendered value of the template out to the terminal. This
+        is an easy way for us to see how the <code>templatefile</code> function works.</p>
+
+    <p>Lets see templates in action. Go to your terminal, change directory into the new project folder you have just
+        created and run <code>terraform init</code> and then <code>terraform apply</code>. You will see the following
+        output rendered:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+<code class="lineno">2 </code>
+<code class="lineno">3 </code>Outputs:
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>rendered_template =
+<code class="lineno">6 </code>hello there kevin
+<code class="lineno">7 </code>there are 7 things to say
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>You can see that Terraform replaced the placeholders in our template with the values that we provided to the
+        <code>templatefile</code> function. So you see the message with <code>kevin</code> and <code>7</code> in it
+        rather than the placeholders.</p>
+
+    <h2 id="leanpub-auto-loops-in-a-template" class="section">Loops in a template</h2>
+
+    <p>You can pass in an array of values into a template and loop round them. Lets take a look at an example of how to
+        do that. Create a new folder, create a file called <code>main.tf</code> (or grab the code from the folder <code>templatefile_example_02</code>
+        in the examples repository) and paste in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>output "rendered_template" {
+<code class="lineno">2 </code>  value = templatefile("./backends.tpl", { port = 8080, ip_addrs = ["10.0.0.1", "10.\
+<code class="lineno">3 </code>0.0.2"] })
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Next create a file called <code>backends.tpl</code> and paste in the following:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code><code class="c">%{ for addr in ip_addrs ~}</code>
+<code class="lineno">2 </code><code class="n">backend</code> $<code class="p">{</code><code class="n">addr</code><code
+                    class="p">}:</code>$<code class="p">{</code><code class="n">port</code><code class="p">}</code>
+<code class="lineno">3 </code><code class="c">%{ endfor ~}</code>
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>This time we are just rendering the template straight to the output. Notice that we are passing in an array for
+        <code>ip_addrs</code>. In the template we are then looping around the <code>ip_addrs</code> array by using a
+        <code>foreach</code> loop. To do a <code>foreach</code> loop you use the syntax <code>%{ for &lt;var&gt; in &lt;variable_name
+            ~}</code> where <code>&lt;var&gt;</code> is any identifier you want to use to reference the current looped
+        item and <code>&lt;variable_name&gt;</code> is the name of the array that is passed into the template. All of
+        the lines you now write are inside the loop until you signal the end of the loop by putting <code>%{ endfor
+            ~}</code>. Notice that inside the loop we are using the current value from the <code>ip_addr</code> array
+        and we are always referencing the <code>port</code>.</p>
+
+    <p>When we run the above project (by doing <code>terraform init</code> and <code>terraform apply</code>) you will
+        notice the following output is rendered for the template:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>backend 10.0.0.1:8080
+<code class="lineno">2 </code>backend 10.0.0.2:8080
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The word <code>backend</code> is constant as that is just text so we see that for each iteration around the loop.
+        The current element of the <code>ip_addr</code> array is then printed followed by the passed in port, which
+        always has the value <code>8080</code>.</p>
+
+    <p>The fact that we can combine loops with interpolated values means that you can write some quite elaborate
+        templates. These can be really useful for programmatically generating things like IAM policies, where you can
+        pass in the ARN of resources that Terraform creates and use them as part of the template.</p>
+
+
+    <p>Chapter 10 - Variables</p>
+
+    <h2 id="leanpub-auto-variables" class="section">Variables</h2>
+
+    <p>A Variable in Terraform is something which can be set at runtime. It allows you to vary what Terraform will do by
+        passing in or using a dynamic value.</p>
+
+    <h2 id="leanpub-auto-our-first-variable" class="section">Our first Variable</h2>
+
+    <p>Lets dive into an example of how to use variables, so we can learn how they work. Create a new folder and create
+        a file called <code>main.tf</code> inside that folder (or simply grab the code from the examples repository in
+        the folder <code>variables_example_01</code>) and copy in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>variable "bucket_name" {
+<code class="lineno"> 7 </code>  description = "the name of the bucket you wish to create"
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>resource "aws_s3_bucket" "bucket" {
+<code class="lineno">11 </code>  bucket = var.bucket_name
+<code class="lineno">12 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>You declare a variable by using the keyword <code>variable</code> then you specify the identifier for the
+        variable in quotes, we are using <code>"bucket_name"</code> as the identifier. Inside the variable block we are
+        adding a description to describe to the user what this variable is used for. The <code>description</code>
+        parameter is completely optional, we could have defined the variable as follows:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>variable "bucket_name" {}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The reason that it is a good idea to provide a description as it gives the user some instruction as to what
+        values to use and what the variable is used for.</p>
+
+    <p>To use the value of a variable in your Terraform code you use the syntax
+        <code>var.&lt;variable_identifier&gt;</code>. You can see that we are setting the bucket property on the <code>aws_s3_bucket</code>
+        resource to the value of our variable <code>var.bucket_name</code>. This means that whatever value we give our
+        variable Terraform will use as the name of the S3 bucket.</p>
+
+    <p>Run the project by opening your terminal, changing into the directory where you have created the project and
+        running <code>terraform init</code> and then <code>terraform apply</code>. Terraform will pause and you will see
+        the following output:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>var.bucket_name
+<code class="lineno">2 </code>  the name of the bucket you wish to create
+<code class="lineno">3 </code>
+<code class="lineno">4 </code>  Enter a value:
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Terraform has paused because it is asking you to provide a value for the variable. The variable name is printed
+        to the screen and underneath is the description we provided. <i>Note if you do not set a description then only
+            the variable name will be shown here</i>. Type in a bucket name that you think will be unique. I used <code>kevholditch-variable-bucket</code>
+        but it really doesn’t matter what value you use. Press enter and then you will notice that Terraform will pause
+        again and ask if you want to apply the changes. Type <code>yes</code> and create the bucket. Terraform will have
+        created the bucket with a name of whatever value you gave it.</p>
+
+    <p>Once you have run the project go ahead and destroy it again by running <code>terraform destroy</code>. Terraform
+        will ask you for a value for the variable again, it doesn’t actually matter what value you give it this time as
+        the variable is not needed for Terraform to destroy the bucket. Press enter and then type <code>yes</code> when
+        Terraform asks you if you really want to destroy the project.</p>
+
+    <h2 id="leanpub-auto-variable-defaults" class="section">Variable defaults</h2>
+
+    <p>Create another project and create a file called <code>main.tf</code> (or copy the code from <code>variables_example_02</code>)
+        and paste in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>variable "bucket_name" {
+<code class="lineno"> 7 </code>  description = "the name of the bucket you wish to create"
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>variable "bucket_suffix" {
+<code class="lineno">11 </code>  default = "-abcd"
+<code class="lineno">12 </code>}
+<code class="lineno">13 </code>
+<code class="lineno">14 </code>resource "aws_s3_bucket" "bucket" {
+<code class="lineno">15 </code>  bucket = "<code class="cp">${</code><code class="n">var</code><code
+                    class="o">.</code><code class="n">bucket_name</code><code class="cp">}${</code><code
+                    class="n">var</code><code class="o">.</code><code class="n">bucket_suffix</code><code
+                    class="cp">}</code>"
+<code class="lineno">16 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>We have extended the first example and added a second variable <code>"bucket_suffix"</code> and we have set its
+        default to <code>"-abcd"</code>. Setting a default on a variable means that if you do not provide a value for
+        that variable then the default will be used. We are then using the value of the bucket_name variable
+        concatenated with the value of the bucket_suffix variable for the value of the bucket name. As we are using the
+        values inside a string we need to surround our variables with <code>${</code> and <code>}</code>. Otherwise
+        Terraform will not use the value of the variable and instead would just print the string
+        <code>var.bucket_name</code>.</p>
+
+    <p>Run the project (<code>terraform init</code>, <code>terraform apply</code>). Terraform will ask you to provide a
+        value for <code>bucket_name</code> as before. Enter a name for the bucket and press enter. Notice that Terraform
+        will now ask you to confirm the run by typing <code>yes</code>. Confirm the run and press enter. Terraform will
+        then go and create the bucket. You may be wondering why Terraform never asked you for a value for <code>bucket_suffix</code>,
+        well it is because Terraform does not need a value for <code>bucket_suffix</code> as you already gave it a
+        default value of <code>-abcd</code>. The end result is that a bucket will be created with whatever name you
+        enter for the bucket name with <code>-abcd</code> on the end of it.</p>
+
+    <h2 id="leanpub-auto-setting-a-variable-on-the-command-line" class="section">Setting a variable on the command
+        line</h2>
+
+    <p>Lets continue working with the project we have just created (<code>variables_example_02</code> in the examples
+        repository). We are now going to learn how we can change the value of <code>bucket_suffix</code>. As when you
+        run the project Terraform does not ask you for a value for it as we have just learnt.</p>
+
+    <p>The first way we can set a value for <code>bucket_suffix</code> is by providing it on the command line. Run the
+        following command <code>terraform apply -var bucket_suffix=hello</code>. Terraform will ask you for a value for
+        <code>bucket_name</code> as you haven’t given it one and it does not have a default. When the project runs
+        Terraform will now create a bucket with whatever name you gave it with <code>hello</code> on the end.</p>
+
+    <p>To set the value of a variable on the command line you use the <code>-var</code> flag followed by the variable
+        name and the value you wish to use. If we want to set both of the variables on the command line then we can do
+        that with the command <code>terraform apply -var bucket_name=kevholditch -var bucket_suffix=foo</code>. In this
+        command we are giving a value to both the <code>bucket_name</code> and <code>bucket_suffix</code>. If you runrun
+        the project with the command to set both variables then Terraform will not stop to ask you a value for the
+        <code>bucket_name</code>. This is because you have now provided one. Terraform will stop and ask for a value of
+        any defined variable that does not have a default value or a value set via the command line or one of the other
+        ways we are going to learn.</p>
+
+    <h2 id="leanpub-auto-setting-a-variable-using-an-environment-variable" class="section">Setting a variable using an
+        environment variable</h2>
+
+    <p>Another way you can set the value of a variable is by using an environment variable. To do this set an
+        environment variable in your terminal using the convention <code>TF_VAR_&lt;variable_identifier&gt;</code>. So
+        for our project (<code>variables_example_02</code> in the examples repository) lets set environment variables
+        for each of the variables. Follow the instructions below based on your OS:</p>
+
+    <p>
+        <b>Mac OS/Linux</b>
+    </p>
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>export TF_VAR_bucket_name=kevholditch
+<code class="lineno">2 </code>export TF_VAR_bucket_suffix=via_env
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>
+        <b>Windows</b>
+    </p>
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>set TF_VAR_bucket_name=kevholditch
+<code class="lineno">2 </code>set TF_VAR_bucket_suffix=via_env
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Once you have set the environment variables run <code>terraform apply</code>. You will see that now Terraform
+        will not ask you for a value for either variable and will use the values from your environment variables.</p>
+
+    <h2 id="leanpub-auto-setting-a-variable-using-a-file" class="section">Setting a variable using a file</h2>
+
+    <p>The next way that you can set the value of variables is by using a file. Create a new file in the project called
+        <code>terraform.tfvars</code> (or you can copy the project <code>variables_example_03</code> from the samples
+        repository). We are going to use the same Terraform code in the <code>main.tf</code> we had before.</p>
+
+    <p>Inside the <code>terraform.tfvars</code> file place the following:</p>
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>bucket_name = "kevholditch"
+<code class="lineno">2 </code>bucket_suffix = "from_file"
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p><code>terraform.tfvars</code> is a special file name that Terraform looks for to discover values for variables.
+        Terraform will look in this file and use any values given for a variable. To set the value of the variable you
+        simply put the variable identifier and then an equals sign and the value you want to give it. We are setting the
+        value of both <code>bucket_name</code> and <code>bucket_suffix</code> in our file. So now when we run the
+        project, Terraform will use those values for the variables and not ask us for them.</p>
+
+    <p>The other way we could have named our file was anything ending in <code>.auto.tfvars</code>. Terraform examines
+        files with that ending for variables being set. It is also possible to define multiple files and put the value
+        for different variables in each of them.</p>
+
+    <h2 id="leanpub-auto-more-complex-variables" class="section">More complex variables</h2>
+
+    <p>Lets look at a more complex example using a map and selecting a value from it with variables. To do this create a
+        new project and create a file called <code>main.tf</code> (or copy the folder <code>variables_example_04</code>
+        from the examples repository) and paste in the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>variable "instance_map" {}
+<code class="lineno">2 </code>variable "environment_type" {}
+<code class="lineno">3 </code>
+<code class="lineno">4 </code>output "selected_instance" {
+<code class="lineno">5 </code>  value = var.instance_map[var.environment_type]
+<code class="lineno">6 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Next create a file called <code>terraform.tfvars</code> where we can give these variables values:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>instance_map = {
+<code class="lineno">2 </code>  dev = "t3.small"
+<code class="lineno">3 </code>  test = "t3.medium"
+<code class="lineno">4 </code>  prod = "t3.large"
+<code class="lineno">5 </code>}
+<code class="lineno">6 </code>
+<code class="lineno">7 </code>environment_type = "dev"
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In our variables file we are setting <code>instance_map</code> to a map. A map is a collection of values indexed
+        by a key name. We have set 3 keys in our map <code>dev</code>, <code>test</code> and <code>prod</code>. The
+        values we have given for each of these keys are instance types to use in AWS. This map could be used to set the
+        instance size based on the type of environment you are creating. Next we are setting the
+        <code>environment_type</code> variable to <code>dev</code>. Look at the Terraform code we have written and you
+        will see that we are defining the two variables <code>instance_map</code> and <code>environment_type</code>. At
+        the bottom we are outputting the value in the map for the key specified by the <code>environment_type</code>
+        variable.</p>
+
+    <p>If you run this project as is then it will output <code>selected_instance = t3.small</code>. This is because
+        <code>t3.small</code> is the value in the map for the key <code>dev</code> and we have set the <code>environment_type</code>
+        to <code>dev</code>. Change the environment type to one of the other values in the map, run the project again
+        and you will see the output change.</p>
+
+    <p>As the map of instances is a variable we could dynamically change this too. So we could have a different <code>terraform.tfvars</code>
+        file per department for example. Allowing us to vary the instance sizes used for different environment types by
+        department.</p>
+
+    <h2 id="leanpub-auto-type-constraints---simple-types" class="section">Type constraints - Simple Types</h2>
+
+    <p>So far we have been setting variables and not specified the type. This means that whatever type you pass to a
+        variable will be the type that the variable assumes. A type constraint allows you to specific the type of a
+        variable. There are 3 simple types <code>string</code>, <code>number</code> and <code>bool</code>.</p>
+
+    <p>To specify a type constraint use the <code>type</code> property when defining a variable. Lets see an example of
+        using the 3 simple types. Create a new folder and a file called <code>main.tf</code> and paste in the following
+        code (or grab the code from <code>variables_example_05</code> if you are using the examples repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "a" {
+<code class="lineno"> 2 </code>  type    = string
+<code class="lineno"> 3 </code>  default = "foo"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>variable "b" {
+<code class="lineno"> 7 </code>  type = bool
+<code class="lineno"> 8 </code>  default = true
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>variable "c" {
+<code class="lineno">12 </code>  type = number
+<code class="lineno">13 </code>  default = 123
+<code class="lineno">14 </code>}
+<code class="lineno">15 </code>
+<code class="lineno">16 </code>output "a" {
+<code class="lineno">17 </code>  value = var.a
+<code class="lineno">18 </code>}
+<code class="lineno">19 </code>
+<code class="lineno">20 </code>output "b" {
+<code class="lineno">21 </code>  value = var.b
+<code class="lineno">22 </code>}
+<code class="lineno">23 </code>
+<code class="lineno">24 </code>output "c" {
+<code class="lineno">25 </code>  value = var.c
+<code class="lineno">26 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In this project we are defining 3 variables <code>a</code>, <code>b</code> and <code>c</code>. We are using the
+        type parameter to define <code>a</code> as a <code>string</code>, <code>b</code> as a <code>bool</code> and
+        <code>c</code> as a number. We are using defaults to set initial values for these variables so we do not have to
+        worry about setting them using one of the techniques described earlier is this chapter and then we are
+        outputting them by using outputs so we can see the values of them.</p>
+
+    <p>By using a type constraint you make it illegal to set the variable to anything other than the type defined. So
+        for example if you try and set <code>b</code> to <code>"hello"</code> or <code>123</code> and run Terraform then
+        Terraform will print an error saying that the value you have provided is not compatible with the type
+        constraint.</p>
+
+    <p>There are a few interesting quirks with how the value you give is interpreted that are worth knowing. When you
+        define the type to be <code>bool</code> then the following values will be valid <code>true</code>,
+        <code>false</code>, <code>"true"</code>, <code>"false"</code>, <code>"1"</code> (evaluated to true),
+        <code>"0"</code> (evaluated to false). The interesting part is that <code>"1"</code> is valid but <code>1</code>
+        (without the quotes) is not valid. Which may be puzzling at first. The reason that this is the case is that when
+        you define a string (by using quotes) then Terraform will attempt to evaluate what is inside that string whereas
+        if you do not use quotes then Terraform will just see <code>1</code> as a number and not attempt to convert it
+        to a bool. With a <code>number</code> any valid number will be allowed with or without quotes. If you specify
+        quotes then you are essentially defining a string but as long as the string only contains digits, Terraform will
+        realise this and implicitly convert the value to a number. With a string any value in quotes will be allowed.
+    </p>
+
+    <p>The fact that Terraform coalesces variables (attempts to see what a variable is) is one of the reasons that its a
+        good idea to use a type constraint. Another reason is that it guides the person using the Terraform code as to
+        what value to use for the variable and eases code readability.</p>
+
+    <p>As well as the 3 simple types above these types can be combined into the following more complex types:</p>
+
+    <ul>
+        <li>list(&lt;TYPE&gt;)</li>
+        <li>set(&lt;TYPE&gt;)</li>
+        <li>map(&lt;TYPE&gt;)</li>
+        <li>
+            <span>object(</span>)
+        </li>
+        <li>tuple([&lt;TYPE&gt;, …])</li>
+    </ul>
+
+    <p>For each of the complex types you can use another complex type type or simple type where you see the word <code>&lt;TYPE&gt;</code>.
+        So you can have a list of number or a list of string or a list of map of string.</p>
+
+    <h2 id="leanpub-auto-type-constraints---list" class="section">Type constraints - List</h2>
+
+    <p>A list is a list of a type. So you can have a list of strings like <code>["foo", "bar"]</code> or a list of
+        number <code>[2, 4, 7]</code>. The type means that every element in the list will be that type.</p>
+
+    <p>Create a new folder and file called <code>main.tf</code> and paste in the following code (or copy the code from
+        <code>variables_example_06</code> in the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "a" {
+<code class="lineno"> 2 </code>  type    = list(string)
+<code class="lineno"> 3 </code>  default = ["foo", "bar", "baz"]
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>output "a" {
+<code class="lineno"> 7 </code>  value = var.a
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>output "b" {
+<code class="lineno">11 </code>  value = element(var.a, 1)
+<code class="lineno">12 </code>}
+<code class="lineno">13 </code>
+<code class="lineno">14 </code>output "c" {
+<code class="lineno">15 </code>  value = length(var.a)
+<code class="lineno">16 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In the above code we are defining a list in variable <code>"a"</code>. We are defining the list to be a list of
+        string. To do this we use the word <code>list</code> and then put the type we want in brackets. Then to set the
+        value for a list, you put the elements in between square brackets.</p>
+
+    <p>In the output variables the output variable <code>"a"</code> is simply printing the list. Variable
+        <code>"b"</code> is using the inbuilt function <code>element</code> that can operate on lists. The HCL language
+        provides various inbuilt functions to allow you to manipulate data. The <code>element</code> function takes a
+        list as its first argument and a number for its second argument. The function will return the item at the
+        element given. Because lists in HCL start from element 0 the value of output <code>b</code> will be
+        <code>"bar"</code>. In output <code>"c"</code> we are using another inbuilt function <code>length</code>. The
+        <code>length</code> function takes a list and returns the length of the list, so the <code>"c"</code> will
+        output <code>3</code>. You can verify the output values by running the project by doing <code>terraform
+            apply</code>. Play with the values so you get a feel for how lists work and how the functions work.</p>
+
+    <h2 id="leanpub-auto-type-constraints---set" class="section">Type constraints - Set</h2>
+
+    <p>A set is almost exactly the same as a list, the key difference is that a set only contains unique values.</p>
+
+    <p>Create a new folder and file called <code>main.tf</code> and paste in the following code (or copy the code from
+        <code>variables_example_07</code> in the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "my_set" {
+<code class="lineno"> 2 </code>  type    = set(number)
+<code class="lineno"> 3 </code>  default = [7, 2, 2]
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>variable "my_list" {
+<code class="lineno"> 7 </code>  type    = list(string)
+<code class="lineno"> 8 </code>  default = ["foo", "bar", "foo"]
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>output "set" {
+<code class="lineno">12 </code>  value = var.my_set
+<code class="lineno">13 </code>}
+<code class="lineno">14 </code>
+<code class="lineno">15 </code>output "list" {
+<code class="lineno">16 </code>  value = var.my_list
+<code class="lineno">17 </code>}
+<code class="lineno">18 </code>
+<code class="lineno">19 </code>output "list_as_set" {
+<code class="lineno">20 </code>  value = toset(var.my_list)
+<code class="lineno">21 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In the above example we are defining a variable called <code>my_set</code> and initialising it to the set <code>[7,
+        2, 2]</code> as I said above a set only contains unique values. So when you run this project by doing <code>terraform
+        apply</code> you will set that the output value <code>set</code> will print <code>[7, 2]</code>. Terraform
+        removes one of the <code>2</code> values as it was a duplicate. To show how sets can be useful we are defining a
+        list called <code>my_list</code> where we are repeating the value <code>foo</code> twice. The value of the
+        <code>list</code> output will be <code>["foo", "bar", "foo"]</code> this is because we are just outputting the
+        value of <code>my_list</code> which is of type <code>list</code> and lists can contain duplicate values. For the
+        output <code>list_as_set</code> we are using the <code>toset</code> function to convert the <code>my_list</code>
+        variable to a set. The value of this output will be <code>["foo", "bar"]</code>. Because we are converting the
+        list to a set Terraform removes the duplicate value <code>"foo"</code>.</p>
+
+    <h2 id="leanpub-auto-type-constraints---tuple" class="section">Type constraints - Tuple</h2>
+
+    <p>A tuple are a strongly typed collection of one or more values. So for example you could define a tuple of three
+        values <code>string, number, number</code> or two values <code>string, string</code>. Once a tuple is defined it
+        always has to contain the number of values as defined in that tuple. The values also have to be the correct type
+        and in the correct order based upon type.</p>
+
+    <p>Create a new folder and file called <code>main.tf</code> and paste in the following code (or copy the code from
+        <code>variables_example_08</code> in the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>variable "my_tup" {
+<code class="lineno">2 </code>  type    = tuple([number, string, bool])
+<code class="lineno">3 </code>  default = [4, "hello", false]
+<code class="lineno">4 </code>}
+<code class="lineno">5 </code>
+<code class="lineno">6 </code>output "tup" {
+<code class="lineno">7 </code>  value = var.my_tup
+<code class="lineno">8 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In the above Terraform code we are defining a tuple variable <code>my_tup</code> with 3 values <code>number,
+        string, bool</code>. The syntax for defining a tuple uses the form <code>tuple([TYPE, TYPE...])</code>. As
+        stated above because we are defining a tuple with 3 values we have to set it to a value with 3 values, hence why
+        we are initialising it to <code>4, "hello", false</code>. If you run this example by doing <code>terraform
+            apply</code> you will see that the output looks exactly like a list. You can kind of think of a tuple as a
+        defined list where each element will always have a certain type and it will always be of a set length.</p>
+
+    <p>Try adding another value to the default for <code>my_tup</code> e.g. set it to <code>[4, "hello", false,
+        "hey"]</code>. If you try doing a <code>terraform apply</code> on this you will see that Terraform gives you an
+        error. This is because the value you are giving the tuple no longer matches the definition.</p>
+
+    <h2 id="leanpub-auto-type-constraints---map" class="section">Type constraints - Map</h2>
+
+    <p>A map as we have already covered in this chapter is a set of values indexed by key name. You can give a map a
+        type, the type will be the type of the values.</p>
+
+    <p>Create a new folder and file called <code>main.tf</code> and paste in the following code (or copy the code from
+        <code>variables_example_09</code> in the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "my_map" {
+<code class="lineno"> 2 </code>  type    = map(number)
+<code class="lineno"> 3 </code>  default = {
+<code class="lineno"> 4 </code>    "alpha" = 2
+<code class="lineno"> 5 </code>    "bravo" = 3
+<code class="lineno"> 6 </code>  }
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>output "map" {
+<code class="lineno">10 </code>  value = var.my_map
+<code class="lineno">11 </code>}
+<code class="lineno">12 </code>
+<code class="lineno">13 </code>output "alpha_value" {
+<code class="lineno">14 </code>  value = var.my_map["alpha"]
+<code class="lineno">15 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In this project we are creating a map of type <code>number</code>. We are initialising the map to have two keys
+        <code>alpha</code> and <code>bravo</code>, the values for the keys are <code>2</code> and <code>3</code>
+        respectively. The fact that we have specified that the map is of type <code>(number)</code> means that all of
+        the values have to match the number constraint.</p>
+
+    <p>The <code>map</code> output value is going to print the whole map. We are also selecting a value out of a map by
+        key using the <code>[]</code> syntax (as we have done previously in this chapter). The <code>alpha_value</code>
+        output will print the value for the <code>alpha</code> key in the map which will be <code>2</code>. Feel free to
+        run the project by using <code>terraform apply</code> and get a feel for how the code is working.</p>
+
+    <h2 id="leanpub-auto-type-constraints---object" class="section">Type constraints - Object</h2>
+
+    <p>An object is a structure that you can define from the other types listed above. It allows you to define quite
+        complex objects and constrain them to types. I think the easiest way to explain it is to dive straight into an
+        example.</p>
+
+    <p>Create a new folder and file called <code>main.tf</code> and paste in the following code (or copy the code from
+        <code>variables_example_10</code> in the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "person" {
+<code class="lineno"> 2 </code>  type = object({ name = string, age = number })
+<code class="lineno"> 3 </code>  default = {
+<code class="lineno"> 4 </code>    name = "Bob"
+<code class="lineno"> 5 </code>    age  = 10
+<code class="lineno"> 6 </code>  }
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>output "person" {
+<code class="lineno">10 </code>  value = var.person
+<code class="lineno">11 </code>}
+<code class="lineno">12 </code>
+<code class="lineno">13 </code>variable "person_with_address" {
+<code class="lineno">14 </code>  type = object({ name = string, age = number, address = object({ line1 = string, li\
+<code class="lineno">15 </code>ne2 = string, county = string, postcode = string }) })
+<code class="lineno">16 </code>  default = {
+<code class="lineno">17 </code>    name = "Jim"
+<code class="lineno">18 </code>    age = 21
+<code class="lineno">19 </code>    address = {
+<code class="lineno">20 </code>      line1 = "1 the road"
+<code class="lineno">21 </code>      line2 = "St Ives"
+<code class="lineno">22 </code>      county = "Cambridgeshire"
+<code class="lineno">23 </code>      postcode = "CB1 2GB"
+<code class="lineno">24 </code>    }
+<code class="lineno">25 </code>  }
+<code class="lineno">26 </code>}
+<code class="lineno">27 </code>
+<code class="lineno">28 </code>output "person_with_address" {
+<code class="lineno">29 </code>  value = var.person_with_address
+<code class="lineno">30 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In the project above we are are first defining a variable called <code>person</code>. This variable has two
+        fields a <code>name</code> which is of type <code>string</code> and an <code>age</code> which is of type <code>number</code>.
+        To define the object we specify each field inside <code>{}</code> brackets. Each field has the form <code>fieldname
+            = type</code>. We are giving person some default values. If you run this project by doing <code>terraform
+            apply</code> you will see that the <code>person</code> output will contain the values we gave it <code>Bob,
+            10</code>. These values are constrained to the types give so if you tried to assign a <code>string</code> to
+        the <code>age</code> field you would get a type constraint error. One interesting thing to point out here is
+        that you are allowed to have different items with the same name in Terraform. In this project we have a <code>variable</code>
+        with the identifier person and we have an output with the same identifier. This is allowed because one is a
+        variable and the other is an output. You are not allowed to have two variables with the same identifier or two
+        outputs.</p>
+
+    <p>Next we are defining a variable called <code>person_with_address</code> to show how you can nest objects to build
+        up even more complex structures. The person structure is the same as before except we have added the field
+        <code>address</code>. The field <code>address</code> is in itself an object which contains four strings <code>line1,
+            line2, county, postcode</code>. You can see when we initialise the variable we set the address by wrapping
+        the values in a set of <code>{}</code> brackets. When you run the project you will see the <code>person_with_address</code>
+        structure printed out.</p>
+
+    <p>By using the same technique as above you can build up structures which are arbitrarily complex.</p>
+
+    <h2 id="leanpub-auto-type-constraints---any-type" class="section">Type constraints - Any type</h2>
+
+    <p>The <code>any</code> type is a special construct that serves as a placeholder for a type yet to be decided.
+        <code>any</code> itself is not a type, Terraform will attempt to calculate the type at runtime when you use
+        <code>any</code>.</p>
+
+    <p>Lets go into an example of using the <code>any</code> type. Create a new folder and file called
+        <code>main.tf</code> and paste in the following code (or copy the code from <code>variables_example_11</code> in
+        the examples repo):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "any_example" {
+<code class="lineno"> 2 </code>  type = any
+<code class="lineno"> 3 </code>  default = {
+<code class="lineno"> 4 </code>    field1 = "foo"
+<code class="lineno"> 5 </code>    field2  = "bar"
+<code class="lineno"> 6 </code>  }
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>output "any_example" {
+<code class="lineno">10 </code>  value = var.any_example
+<code class="lineno">11 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In the above example we are defining an object with the <code>any</code> type. Because we are initialising the
+        object to a default value, Terraform will use this default value to figure out the type of our variable <code>any_example</code>.
+        Terraform will give our variable the type <code>object({ field1 = string, field2 = string})</code>. We are then
+        printing out the <code>any_example</code> variable using an output.</p>
+
+
+</div>
+</body>
+</html>

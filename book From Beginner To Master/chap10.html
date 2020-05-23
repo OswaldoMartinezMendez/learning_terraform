@@ -1,0 +1,154 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 11 - Project Layout</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-11---project-layout" class="chapter">Chapter 11 - Project Layout</h1>
+
+    <h2 id="leanpub-auto-layout" class="section">Layout</h2>
+
+    <p>Up until now we have been creating several Terraform projects to get used to different concepts we have been
+        learning. But in every project we have been creating a single file called <code>main.tf</code> where we have
+        placed all of our Terraform code (HCL). You may have wondered why all of the code was in a single file and what
+        was the significance of that? Terraform actually does not care what the name of the file is, as long as it ends
+        in <code>.tf</code>. So in all of the projects so far we could have called the file <code>project.tf</code>,
+        <code>code.tf</code> or <code>foo.tf</code>. It really does not matter.</p>
+
+    <p>We can also split the code over as many files as we wish. The only rule is that all of the files have to be in
+        the same folder because folders have a significance in Terraform (as we will learn in the next chapter on
+        modules). The top level folder we have been working in is considered the main Terraform project. All files at
+        the level (directly in that folder) are considered to be part of the project.</p>
+
+    <p>So if we have the following folder structure on disk:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>/project
+<code class="lineno">2 </code>    main.tf
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Then inside <code>main.tf</code> we had the code as we had in our first Terraform project:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region = "eu-west-1"
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno">6 </code>  bucket = "&lt;yourname&gt;-first-bucket"
+<code class="lineno">7 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Then Terraform will consider that we are setting up the AWS provider and creating a single S3 bucket. Now if we
+        change our project folder structure to the following:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>/project
+<code class="lineno">2 </code>    provider.tf
+<code class="lineno">3 </code>    s3.tf
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Then in the <code>provider.tf</code> file we place the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region = "eu-west-1"
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In <code>s3.tf</code> we place the S3 bucket creation:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno">2 </code>  bucket = "&lt;yourname&gt;-first-bucket"
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Then if we ran Terraform again with the files in this structure Terraform would not show any difference.
+        Terraform would still create a single S3 bucket. A good way to think about this is that when you run Terraform,
+        it combines all of the code from all of the files in the top level folder together (in this case
+        <code>/project</code>) and makes them into a single big text block. It then works out what you have defined in
+        that block and the original filenames are thrown away.</p>
+
+    <p>Even though this means we are free to name the files and organise our code as we wish there are some conventions
+        the community follow that make it easier to move from one Terraform project to another. Generally providers are
+        setup in a file called <code>main.tf</code>. This gives you a place to look as to where all providers are
+        configured. Files are then normally broken up around different areas of the system. For example if we are
+        creating an AWS ECS cluster, we could put all of the setup for that cluster in a file called <code>ecs.tf</code>.
+        If we are configuring our DNS entries in route53 we could put that in a file called <code>dns.tf</code>. The
+        important point is to layout the code as to how it makes the most sense for you and the people you are working
+        on the project with.</p>
+
+    <p>One last thing to cover on project structure is what happens when you create a child folder and put some code in
+        there? Lets update the project above and add a child folder so our project structure now looks like:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>/project
+<code class="lineno">2 </code>    provider.tf
+<code class="lineno">3 </code>    s3.tf
+<code class="lineno">4 </code>    other/
+<code class="lineno">5 </code>        bucket.tf
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Then inside the file <code>bucket.tf</code> place the following code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_s3_bucket" "other" {
+<code class="lineno">2 </code>  bucket = "&lt;yourname&gt;-other-bucket"
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>If you run Terraform by running <code>terraform init</code> and then <code>terraform apply</code> from inside the
+        <code>project/</code> folder you will see the Terraform runs and creates one S3 bucket. It completely ignores
+        the code inside <code>bucket.tf</code>. That is because it is in a sub folder and only the code in the top level
+        folder is considered by Terraform. <i>Note if you want to get the code for the last example then it is in the
+            folder <code>project_layout_example_01</code> in the examples repository</i>.</p>
+
+
+</div>
+</body>
+</html>

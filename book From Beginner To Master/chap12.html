@@ -1,0 +1,373 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 13 - Plans</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-13---plans" class="chapter">Chapter 13 - Plans</h1>
+
+    <h2 id="leanpub-auto-plans" class="section">Plans</h2>
+
+    <p>A plan is Terraform showing you how it needs to change the world to get it into the desired state specified in
+        your code. Terraform plans, detail you what Terraform will create, what Terraform will destroy and what
+        Terraform will update. This gives you a view on what Terraform is going to do before you ask Terraform to do it.
+        Terraform summarises how many creates, updates and destroys it is going to do at the bottom of the plan.</p>
+
+    <p>So far in this book we have been running <code>terraform apply</code> which will automatically do a plan first
+        and then pause and wait for you to confirm. When Terraform pauses it is giving you time to review the plan to
+        make sure it is correct before executing it. In this chapter we are going to learn how to read plans and some
+        key things to look out for.</p>
+
+    <p>Lets create a small project so we can explore how plans work. Create a new folder in your workspace and create a
+        single file in the folder called <code>main.tf</code> and paste in the following code (or if you are using the
+        examples from GitHub then the folder with the code is <code>plans_example_01</code>):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region  = "eu-west-1"
+<code class="lineno">3 </code>  version = "~&gt; 2.27"
+<code class="lineno">4 </code>}
+<code class="lineno">5 </code>
+<code class="lineno">6 </code>resource "aws_sqs_queue" "test_queue" {
+<code class="lineno">7 </code>  name = "test_queue"
+<code class="lineno">8 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>By now you should be able to understand what the HCL above is going to do, it is going to setup the AWS provider
+        and create a queue with the name <code>test_queue</code>. Open your terminal and go into the folder where you
+        have created the project and run <code>terraform init</code> to initialise Terraform and then <code>terraform
+            apply</code> but do not confirm just yet.</p>
+
+    <p>You should see a plan that looks something like this:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>An execution plan has been generated and is shown below.
+<code class="lineno"> 2 </code>Resource actions are indicated with the following symbols:
+<code class="lineno"> 3 </code>  + create
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>Terraform will perform the following actions:
+<code class="lineno"> 6 </code>
+<code class="lineno"> 7 </code>  # aws_sqs_queue.test_queue will be created
+<code class="lineno"> 8 </code>  + resource "aws_sqs_queue" "test_queue" {
+<code class="lineno"> 9 </code>      + arn                               = (known after apply)
+<code class="lineno">10 </code>      + content_based_deduplication       = false
+<code class="lineno">11 </code>      + delay_seconds                     = 0
+<code class="lineno">12 </code>      + fifo_queue                        = false
+<code class="lineno">13 </code>      + id                                = (known after apply)
+<code class="lineno">14 </code>      + kms_data_key_reuse_period_seconds = (known after apply)
+<code class="lineno">15 </code>      + max_message_size                  = 262144
+<code class="lineno">16 </code>      + message_retention_seconds         = 345600
+<code class="lineno">17 </code>      + name                              = "test_queue"
+<code class="lineno">18 </code>      + policy                            = (known after apply)
+<code class="lineno">19 </code>      + receive_wait_time_seconds         = 0
+<code class="lineno">20 </code>      + visibility_timeout_seconds        = 30
+<code class="lineno">21 </code>    }
+<code class="lineno">22 </code>
+<code class="lineno">23 </code>Plan: 1 to add, 0 to change, 0 to destroy.
+<code class="lineno">24 </code>
+<code class="lineno">25 </code>Do you want to perform these actions?
+<code class="lineno">26 </code>  Terraform will perform the actions described above.
+<code class="lineno">27 </code>  Only 'yes' will be accepted to approve.
+<code class="lineno">28 </code>
+<code class="lineno">29 </code>  Enter a value:
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The plan above is going to create a single SQS queue (as we were expecting). Everything that Terraform is going
+        to create is marked with a <code>+</code> symbol. The line <code>+ resource "aws_sqs_queue" "test_queue"</code>
+        is showing that Terraform is going to create a new resource. Because of this every attribute is also marked with
+        <code>+</code> which may be obvious when you are creating a new resource but the attribute markings will be more
+        important later on.</p>
+
+    <p>At the bottom of the plan is the summary <code>Plan: 1 to add, 0 to change, 0 to destroy.</code>. In the summary
+        Terraform adds up all of the resources it is going to create (add), update (change) and destroy. It is good
+        practice to look at this line first and consider whether any of the numbers look completely wrong. For example
+        if you are expecting to be creating some new resources and Terraform says <code>0 to add, 4 to change, 4 to
+            destroy</code> then Terraform will not be creating anything and you will want to review the plan carefully.
+    </p>
+
+    <p>The plan above is what we are expecting so lets confirm it by typing <code>yes</code> and pressing enter.</p>
+
+    <p>Once Terraform has applied those changes update the <code>aws_sqs_queue</code> resource to the following (code is
+        in <code>plans_example_02</code> folder in the examples repository if you want to paste it in from there <i>note
+            you will have to copy the code across you cannot use a new folder otherwise Terraform will consider it a
+            different project</i>):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_sqs_queue" "test_queue" {
+<code class="lineno">2 </code>  name                       = "test_queue"
+<code class="lineno">3 </code>  visibility_timeout_seconds = 45
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Now run <code>terraform apply</code> again and you should see a plan like:</p>
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>An execution plan has been generated and is shown below.
+<code class="lineno"> 2 </code>Resource actions are indicated with the following symbols:
+<code class="lineno"> 3 </code>  ~ update in-place
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>Terraform will perform the following actions:
+<code class="lineno"> 6 </code>
+<code class="lineno"> 7 </code>  # aws_sqs_queue.test_queue will be updated in-place
+<code class="lineno"> 8 </code>  ~ resource "aws_sqs_queue" "test_queue" {
+<code class="lineno"> 9 </code>        arn                               = "arn:aws:sqs:eu-west-1:282637107404:test\
+<code class="lineno">10 </code>_queue"
+<code class="lineno">11 </code>        content_based_deduplication       = false
+<code class="lineno">12 </code>        delay_seconds                     = 0
+<code class="lineno">13 </code>        fifo_queue                        = false
+<code class="lineno">14 </code>        id                                = "https://sqs.eu-west-1.amazonaws.com/282\
+<code class="lineno">15 </code>637107404/test_queue"
+<code class="lineno">16 </code>        kms_data_key_reuse_period_seconds = 300
+<code class="lineno">17 </code>        max_message_size                  = 262144
+<code class="lineno">18 </code>        message_retention_seconds         = 345600
+<code class="lineno">19 </code>        name                              = "test_queue"
+<code class="lineno">20 </code>        receive_wait_time_seconds         = 0
+<code class="lineno">21 </code>        tags                              = {}
+<code class="lineno">22 </code>      ~ visibility_timeout_seconds        = 30 -&gt; 45
+<code class="lineno">23 </code>    }
+<code class="lineno">24 </code>
+<code class="lineno">25 </code>Plan: 0 to add, 1 to change, 0 to destroy.
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Notice this time the resource is marked with <code>~</code> which means the resource will be updated in place. An
+        update in place means the resource can be updated without destroying it and recreating it. It is important to
+        spot when an update can happen in place which is generally safe and when a resource has to be destroyed first
+        and then recreated (we will cover this case soon). The <code>~</code> symbol is next to the <code>visibility_timeout_seconds</code>
+        attribute showing that this attribute will be changed if you confirm this apply. You can see that the value is
+        changing from <code>30</code> to <code>45</code>.</p>
+
+    <p>Apply this plan by typing <code>yes</code> and pressing enter. This will now modify the queue so that it has a
+        visibility timeout of <code>45</code> seconds.</p>
+
+    <p>Update the <code>aws_sqs_queue</code> resource again with the following code (or you can get the code example
+        from the folder <code>plans_example_03</code> in the examples repository <i>note you will have to copy the code
+            across you cannot use a new folder otherwise Terraform will consider it a different project</i>):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>resource "aws_sqs_queue" "test_queue" {
+<code class="lineno">2 </code>  name                       = "my_queue"
+<code class="lineno">3 </code>  visibility_timeout_seconds = 45
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>We are changing the name of the SQS queue from <code>test_queue</code> to <code>my_queue</code>. In AWS there is
+        no way to change the name of a SQS queue once it is created. To do this you have to destroy your old queue and
+        create a new one. Lets see how Terraform handles the update we have made to our code. Run <code>terraform
+            apply</code> and view the plan which should look something like this:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>An execution plan has been generated and is shown below.
+<code class="lineno"> 2 </code>Resource actions are indicated with the following symbols:
+<code class="lineno"> 3 </code>-/+ destroy and then create replacement
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>Terraform will perform the following actions:
+<code class="lineno"> 6 </code>
+<code class="lineno"> 7 </code>  # aws_sqs_queue.test_queue must be replaced
+<code class="lineno"> 8 </code>-/+ resource "aws_sqs_queue" "test_queue" {
+<code class="lineno"> 9 </code>      ~ arn                               = "arn:aws:sqs:eu-west-1:282637107404:test\
+<code class="lineno">10 </code>_queue" -&gt; (known after apply)
+<code class="lineno">11 </code>        content_based_deduplication       = false
+<code class="lineno">12 </code>        delay_seconds                     = 0
+<code class="lineno">13 </code>        fifo_queue                        = false
+<code class="lineno">14 </code>      ~ id                                = "https://sqs.eu-west-1.amazonaws.com/282\
+<code class="lineno">15 </code>637107404/test_queue" -&gt; (known after apply)
+<code class="lineno">16 </code>      ~ kms_data_key_reuse_period_seconds = 300 -&gt; (known after apply)
+<code class="lineno">17 </code>        max_message_size                  = 262144
+<code class="lineno">18 </code>        message_retention_seconds         = 345600
+<code class="lineno">19 </code>      ~ name                              = "test_queue" -&gt; "my_queue" # forces repl\
+<code class="lineno">20 </code>acement
+<code class="lineno">21 </code>      + policy                            = (known after apply)
+<code class="lineno">22 </code>        receive_wait_time_seconds         = 0
+<code class="lineno">23 </code>      - tags                              = {} -&gt; null
+<code class="lineno">24 </code>        visibility_timeout_seconds        = 45
+<code class="lineno">25 </code>    }
+<code class="lineno">26 </code>
+<code class="lineno">27 </code>Plan: 1 to add, 0 to change, 1 to destroy.
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The symbol next to the <code>aws_sqs_queue</code> is <code>-/+</code>. This is a special type of update where
+        Terraform has to destroy your resource and then create a new one in order to make the change. It is important to
+        note that destroy then creates are potentially dangerous as it means your resource may not be available for a
+        period of time, so this type of change should applied with caution. At the bottom, the summary of the plan
+        states <code>1 to add, 0 to change, 1 to destroy</code> which shows that we are destroying the resource and then
+        recreating it, even though all we did was update the name of the queue.</p>
+
+    <p>When you apply the change above there will be a period of time where no SQS queue will exist. As what Terraform
+        will do is first destroy the old queue and only once the queue is destroyed will it then create the new one. If
+        you want Terraform to create the new queue before deleting the old one then this is possible using a resource
+        lifecycle which will be covered in a later chapter. As a small aside if you want to change the name of an SQS
+        queue then a better technique would be to create a new SQS queue in one release so both queues exist side by
+        side, then switch your application over to using the new queue. Then do another Terraform release to delete the
+        original queue.</p>
+
+    <p>Take the <code>main.tf</code> file and remove the <code>aws_sqs_queue</code> resource (or you can get the code
+        example from the folder <code>plans_example_04</code> in the examples repository <i>note you will have to copy
+            the code across you cannot use a new folder otherwise Terraform will consider it a different project</i>).
+    </p>
+
+    <p>Run <code>terraform apply</code> and this time you will see a plan such as:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>An execution plan has been generated and is shown below.
+<code class="lineno"> 2 </code>Resource actions are indicated with the following symbols:
+<code class="lineno"> 3 </code>  - destroy
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>Terraform will perform the following actions:
+<code class="lineno"> 6 </code>
+<code class="lineno"> 7 </code>  # aws_sqs_queue.test_queue will be destroyed
+<code class="lineno"> 8 </code>  - resource "aws_sqs_queue" "test_queue" {
+<code class="lineno"> 9 </code>      - arn                               = "arn:aws:sqs:eu-west-1:282637107404:my_q\
+<code class="lineno">10 </code>ueue" -&gt; null
+<code class="lineno">11 </code>      - content_based_deduplication       = false -&gt; null
+<code class="lineno">12 </code>      - delay_seconds                     = 0 -&gt; null
+<code class="lineno">13 </code>      - fifo_queue                        = false -&gt; null
+<code class="lineno">14 </code>      - id                                = "https://sqs.eu-west-1.amazonaws.com/282\
+<code class="lineno">15 </code>637107404/my_queue" -&gt; null
+<code class="lineno">16 </code>      - kms_data_key_reuse_period_seconds = 300 -&gt; null
+<code class="lineno">17 </code>      - max_message_size                  = 262144 -&gt; null
+<code class="lineno">18 </code>      - message_retention_seconds         = 345600 -&gt; null
+<code class="lineno">19 </code>      - name                              = "my_queue" -&gt; null
+<code class="lineno">20 </code>      - receive_wait_time_seconds         = 0 -&gt; null
+<code class="lineno">21 </code>      - tags                              = {} -&gt; null
+<code class="lineno">22 </code>      - visibility_timeout_seconds        = 45 -&gt; null
+<code class="lineno">23 </code>    }
+<code class="lineno">24 </code>
+<code class="lineno">25 </code>Plan: 0 to add, 0 to change, 1 to destroy.
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>As we have removed the SQS queue from our Terraform code you will see that Terraform wants to remove the SQS
+        queue from AWS. The <code>-</code> symbol next to the <code>aws_sqs_queue</code> resource depicts the fact that
+        Terraform wants to destroy the resource. The summary of the plan also shows that Terraform has 1 item to
+        destroy.</p>
+
+    <p>Destroys and destroy then creates are the key thing to look out for when reviewing a Terraform plan. As both of
+        them mean that you are going to destroy a resource. Once the resource is destroyed any state that was part of
+        the resource could be lost and obviously if you delete a key part of your infrastructure you could cause an
+        outage.</p>
+
+    <p>When reviewing a plan a good mindset to get into is to think about the changes you have made to your Terraform
+        code and see if the plan matches what you are expecting. Start with the summary and see if you are seeing
+        roughly the right amount of adds, updates and destroys and then work up from there. When changing a resource
+        property carefully check whether that is going to result in Terraform needing to destroy and then recreate that
+        resource in order to make that change. If you find the documentation for the resource it will say <code>force_create</code>
+        next to the attributes that will cause a destroy then create if they are changed. This is what we saw in the SQS
+        example we went through where we updated the name.</p>
+
+    <h2 id="leanpub-auto-plan-command" class="section">Plan command</h2>
+
+    <p>Until now we have been taking advantage of the fact that when you run the command <code>terraform apply</code> by
+        default it does a plan first and pauses for you to confirm before actually doing the apply. It is however
+        possible just to get Terraform to do a plan without the option of applying it. To do this simply run the command
+        <code>terraform plan</code>. A Terraform plan will produce a plan as we have seen before but it will not give
+        you the option to apply it, instead it will just show you the plan. This command can be useful if you want to
+        just test the water with something and do not want to run the risk of applying it by accident. It can also be
+        useful when building Terraform deployment pipelines as we discuss below.</p>
+
+    <p>Lets go through an example of using the Terraform plan command. Go back to the example from the project <code>plans_example_01</code>
+        in the code examples repository or use the following <code>main.tf</code> code:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>provider "aws" {
+<code class="lineno">2 </code>  region = "eu-west-1"
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>resource "aws_sqs_queue" "test_queue" {
+<code class="lineno">6 </code>  name = "test_queue"
+<code class="lineno">7 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Open your terminal and go into the folder where the <code>main.tf</code> file is located and run <code>terraform
+        plan</code>. Terraform will show you the same plan as we saw at the start of this chapter. You can save the plan
+        that Terraform generates to a file by using the <code>-out</code> parameter. Lets try the plan again and this
+        time save it to a file called <code>myplan</code> by using the command <code>terraform plan -out myplan</code>.
+    </p>
+
+    <p>You may be wondering what you can do with the plan that you have saved to a file. Well you can use the plan you
+        just saved with the apply command, to apply that plan to your infrastructure. Try running the following command
+        <code>terraform apply myplan</code>. Terraform will just apply your plan saved in the file <code>myplan</code>
+        without stopping to ask you if you wanted to do it or not. The reason being is that by running apply in this way
+        you have broken the <code>terraform apply</code> command into two phases: the plan phase and the apply phase.
+        Because you saved the plan to a file and you pass that plan to apply you are saying to Terraform that this is
+        the plan I want you to execute in the apply.</p>
+
+    <p>Remember to finish up by destroying the resources by running <code>terraform destroy</code> and confirming by
+        typing <code>yes</code> and pressing enter.</p>
+
+    <p>Being able to separate out the plan and apply phase enables you to write your own build deploy pipelines by
+        having the plan as a step and then passing that plan file onto the apply step. This gives you the option to
+        pause if you want and allow a human operator to check the plan before you pass it to be applied.</p>
+
+    <h2 id="leanpub-auto-auto-apply" class="section">Auto apply</h2>
+
+    <p>It is possible to skip the confirmation where Terraform pauses during the apply phase a different way, you can
+        use the <code>-auto-approve</code> flag. Lets test this out by ysing the same Terraform code again (from the
+        repository folder <code>plans_example_01</code>) run the command <code>terraform apply -auto-approve</code>.
+        Terraform will simply create the AWS SQS queue without stopping to ask you to confirm. <i>Remember to destroy
+            these resources once you have run the example</i>.</p>
+
+    <p>I wanted to show the <code>-auto-approve</code> flag in order to highlight a key difference between using that
+        and passing a plan to the <code>apply</code> command which also causes apply to run without asking for you to
+        confirm. The difference is that when you pass a plan to the apply command, the apply command will execute that
+        exact plan. So if something has changed in your infrastructure and that plan is no longer possible then
+        Terraform will error and tell you. It is a safe guard where you are explicitly saying to Terraform, go and
+        execute exactly this plan. Whereas with the auto apply flag you are saying to Terraform go and work out what to
+        do, generate a plan and then just go and do it without asking you to confirm. For this reason using the <code>-auto-approve</code>
+        flag is much more dangerous and not really recommended in most scenarios, as if Terraform is going to destroy
+        your database it is just going to go ahead and do it without asking you to confirm.</p>
+
+    <p>This is the reason that if you are building Terraform into a build deploy pipeline you want to use a plan file
+        and pass it to apply. As it allows you to review the plan and then know for sure that Terraform will only be
+        executing exactly the plan that you reviewed.</p>
+
+</div>
+</body>
+</html>

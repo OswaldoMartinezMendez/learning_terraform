@@ -1,0 +1,170 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 7 - Outputs</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-7---outputs" class="chapter">Chapter 7 - Outputs</h1>
+
+    <h2 id="leanpub-auto-outputs-explained" class="section">Outputs explained</h2>
+
+    <p>An output in your Terraform project shows a piece of data after Terraform successfully completes. Outputs are
+        useful as they allow you to echo values from the Terraform run to the command line. For example, if you are
+        creating an environment and setting up a bastion jump box as part of that environment then its handy to be able
+        to echo the public IP address of the newly created bastion to the command line. Then after the Terraform apply
+        finishes you get given the IP of the newly created bastion ready for you to ssh straight onto it.</p>
+
+    <p>Lets start with an example of outputs. Create a new folder to put our new Terraform project into and create a
+        single file called <code>main.tf</code> and paste in the following code (or grab the code from <code>outputs_example_01</code>
+        folder inside the examples repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>output "message" {
+<code class="lineno">2 </code>  value = "Hello World"
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Try running this project by opening your terminal. Changing directory into the folder that you created where the
+        <code>main.tf</code> file is and then running <code>terraform init</code> and <code>terraform apply</code>. You
+        will see that Terraform runs and then prints the following:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>Apply complete! Resources: 0 added, 0 changed, 0 destroyed.
+<code class="lineno">2 </code>
+<code class="lineno">3 </code>Outputs:
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>message = Hello World
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>A couple of interesting things just happened. Firstly, did you notice that Terraform did not pause to ask you if
+        you wanted to do the apply? The reason for this is that Terraform realised there was nothing to do so therefore
+        there was nothing to ask you! You can see from the message above that Terraform states that nothing changed
+        (<code>0 added, 0 changed, 0 destroyed.</code>). You then see <code>Outputs:</code> and under there Terraform
+        prints out the values of all of the outputs you have defined. We defined a single output with the identifier
+        <code>message</code> and gave it the value <code>Hello world</code> so that is what Terraform printed.</p>
+
+    <p>To define an output you open an <code>output</code> block by using the <code>output</code> keyword. You then
+        start the output block with <code>{</code>. You are only allowed to set a single property called
+        <code>value</code>. Whatever value you give to the <code>value</code> property will be outputted to the console
+        after a successful Terraform apply. You then close the output block with <code>}</code>.</p>
+
+    <p>
+        <i>Note outputs are used in modules too and have slightly different semantics, this is covered in the chapter on
+            modules.</i>
+    </p>
+
+    <h2 id="leanpub-auto-outputting-resource-properties" class="section">Outputting resource properties</h2>
+
+    <p>The first example is pretty basic and in the real world probably not very useful. Outputs are much more useful
+        when used to output the values of resources that have been created as part of a Terraform run. Lets create
+        another Terraform project and do that. Create a new folder and create a single file called <code>main.tf</code>
+        then paste in the following code (or copy the folder <code>outputs_example_02</code> in the examples
+        repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region = "eu-west-1"
+<code class="lineno"> 3 </code>}
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>resource "aws_s3_bucket" "first_bucket" {
+<code class="lineno"> 6 </code>  bucket = "kevholditch-bucket-outputs"
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>output "bucket_name" {
+<code class="lineno">10 </code>  value = aws_s3_bucket.first_bucket.id
+<code class="lineno">11 </code>}
+<code class="lineno">12 </code>
+<code class="lineno">13 </code>output "bucket_arn" {
+<code class="lineno">14 </code>  value = aws_s3_bucket.first_bucket.arn
+<code class="lineno">15 </code>}
+<code class="lineno">16 </code>
+<code class="lineno">17 </code>output "bucket_information" {
+<code class="lineno">18 </code>  value = "bucket name: <code class="cp">${</code><code
+                    class="n">aws_s3_bucket</code><code class="o">.</code><code class="n">first_bucket</code><code
+                    class="o">.</code><code class="n">id</code><code class="cp">}</code>, bucket arn: <code class="cp">${</code><code
+                    class="n">aws_s3_bucke</code>\
+<code class="lineno">19 </code><code class="n">t</code><code class="o">.</code><code class="n">first_bucket</code><code
+                    class="o">.</code><code class="n">arn</code><code class="cp">}</code>"
+<code class="lineno">20 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Lets walk through the above code. The <code>provider</code> and <code>resource</code> should be familiar to you.
+        We are simply defining the AWS provider to be used with the <code>eu-west-1</code> region and setting up an S3
+        bucket. Feel free to change the name of the bucket to whatever you wish. Next we define an output called <code>bucket_name</code>.
+        In the bucket_name we are going to output the name of the bucket by using the attribute of the S3 bucket
+        resource that we create. We use the same technique to output the ARN of the bucket that we create in the output
+        <code>bucket_arn</code>. In both of those examples because we are directly using the attribute we can just set
+        it equal to <code>value</code> without any quotes. The last output <code>bucket_information</code> prints an
+        interpolated string which will give us the bucket name and bucket arn. As this value is a string with
+        interpolated values we have to surround in quotes and <code>${</code> <code>}</code>.</p>
+
+    <p>Open a terminal, go into the directory where you have defined that project, run <code>terraform init</code>,
+        <code>terraform apply</code> and confirm by typing <code>yes</code> and pressing enter. Terraform runs, creates
+        the S3 bucket and gives me the following output under the <code>Outputs:</code> heading:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>bucket_arn = arn:aws:s3:::kevholditch-bucket-outputs
+<code class="lineno">2 </code>bucket_information = bucket name: kevholditch-bucket-outputs, bucket arn: arn:aws:s3\
+<code class="lineno">3 </code>:::kevholditch-bucket-outputs
+<code class="lineno">4 </code>bucket_name = kevholditch-bucket-outputs
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Terraform got the values from the S3 bucket that it created and outputted them when the run completed. Terraform
+        prints the outputs in alphabetical order, not the order that you define them in your project. That is a good
+        point to make, that Terraform does not care which order you define the blocks in your project. Try reordering
+        them and running <code>terraform apply</code> again. You will notice that Terraform will say that there is
+        nothing to do. </p>
+
+    <h2 id="leanpub-auto-exporting-all-attributes" class="section">Exporting all attributes</h2>
+
+    <p>As of Terraform <code>0.12&gt;</code> (which this book is based on), Terraform allows you to output an entire
+        resource or data block. To do this take the example that we just had and add the following output (in the
+        examples repository it is <code>outputs_example_03</code> if you want to just get the code):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>output "all" {
+<code class="lineno">2 </code>  value = aws_s3_bucket.first_bucket
+<code class="lineno">3 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Run the project again (<code>terraform apply</code>) and you will notice that you see an output called
+        <code>all</code> that has all of the attributes that are exported by the <code>aws_s3_bucket</code> resource.
+        Sometimes it can be handy just to output the whole resource to the console. Normally when you are debugging
+        something and you want to see what the value of one of the properties is.</p>
+
+
+</div>
+</body>
+</html>

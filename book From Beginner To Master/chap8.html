@@ -1,0 +1,50 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 8 - Locals</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet" />
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-8---locals" class="chapter">Chapter 8 - Locals</h1>
+
+    <h2 id="leanpub-auto-locals-in-detail" class="section">Locals in detail</h2>
+
+    <p>A local is Terraform’s representation of a normal programming languages’s variable.  Confusingly Terraform also has a concept called a variable which is really an input, variables are covered in chapter 10.  A local can refer to a fixed value such as a string or it can be used to refer to an expression such as two other locals concatenated together or the attribute of a resource that you have created.  Lets dive into an example.  Create a new folder in your workspace and create a single file inside it called <code>main.tf</code> and copy in the following code (or if you want to grab the code from the samples repository copy the folder <code>local_example_01</code>):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region = "eu-west-1"
+<code class="lineno"> 3 </code>}
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>locals {
+<code class="lineno"> 6 </code>  first_part  = "hello"
+<code class="lineno"> 7 </code>  second_part = "<code class="cp">${</code><code class="n">local</code><code class="o">.</code><code class="n">first_part</code><code class="cp">}</code>-there"
+<code class="lineno"> 8 </code>  bucket_name = "<code class="cp">${</code><code class="n">local</code><code class="o">.</code><code class="n">second_part</code><code class="cp">}</code>-how-are-you-today"
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>resource "aws_s3_bucket" "bucket" {
+<code class="lineno">12 </code>  bucket = local.bucket_name
+<code class="lineno">13 </code>}
+</pre></div>
+
+    </figure>
+
+
+    <p>In the code above we define a local block by using the keyword <code>locals</code> and then an opening <code>{</code>.  We then define each local on a new line by giving it a name.  The first local we define is called <code>first_part</code>.  You then follow it with an <code>=</code> and then give it a value.  For the <code>first_part</code> local we are giving it the value of the string literal <code>hello</code>.  For the second local <code>second_part</code> we are using the value <code>"${local.first_part}-there"</code>.  As the whole expression is inside quotes we need to use the <code>${</code> and <code>}</code> around our expression so Terraform evaluates it.  To reference a local you use the expression syntax <code>local.local_identifier</code>.  So the <code>second_part</code> local will be set to “hello-there”.  In the <code>bucket_name</code> local we are using the <code>second_part</code> local in the expression <code>"${local.second_part}-how-are-you-today"</code> which will evaluate to <code>hello-there-how-are-you-today</code>.  </p>
+
+    <p>At the bottom of the project we are defining an S3 bucket and setting the name to <code>local.bucket_name</code>, so this will create an S3 bucket with the name <code>hello-there-how-are-you-today</code>.  Note we do not need the <code>${</code> and <code>}</code> as we are not inside quotes here.  We could also have set the bucket to <code>"${local.bucket_name}"</code>, which would have evaluated to the same thing.  But since Terraform <code>0.12&gt;</code> we can now omit the <code>${</code> and <code>}</code> for a single line expression where we are using the whole value.  Which I think makes the code cleaner and easier to read.  As we are defining our infrastructure as code the easier it is to read the better.</p>
+
+    <p>To run the project go to the terminal and cd into the folder where you created the file <code>main.tf</code>.  Run <code>terraform init</code> and then <code>terraform apply</code>.  When prompted say <code>yes</code> if you want to run in the project.  This will create the S3 bucket with the name <code>hello-there-how-are-you-today</code>.  To destroy this infrastructure run <code>terraform destroy</code> and then confirm.</p>
+
+    <h2 id="leanpub-auto-locals-referencing-resources" class="section">Locals referencing resources</h2>
+
+    <p>Locals can reference the output of a resource or a data source by using the expression syntax we have learnt.  This allows you to give something a more meaningful name or to combine outputs from different resource and data source attributes to build up a more complex value.</p>
+
+
+
+</div>
+</body>
+</html>

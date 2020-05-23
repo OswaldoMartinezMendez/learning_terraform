@@ -1,0 +1,612 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+    <title dir="ltr">Chapter 12 - Modules</title>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+    <meta charset="utf-8"/>
+</head>
+<body dir="ltr" class="markua">
+<div>
+    <h1 id="leanpub-auto-chapter-12---modules" class="chapter">Chapter 12 - Modules</h1>
+
+    <h2 id="leanpub-auto-modules" class="section">Modules</h2>
+
+    <p>Last chapter we learned about how Terraform handles files and folders in a project. You may have wondered what is
+        the purpose of creating child folders if Terraform ignores them? It is because Terraform uses child folders to
+        allow you to create modules.</p>
+
+    <p>A module in Terraform is a mini Terraform project that can contain all of the same constructs as our main
+        Terraform project (resources, data blocks, locals, etc). Modules are useful as they allow us to define a
+        reusable block of Terraform code and have many instances of it in our main Terraform project.</p>
+
+    <h2 id="leanpub-auto-modules-in-action" class="section">Modules in action</h2>
+
+    <p>Lets go into an example of how a module works. For this example the code and directory structure will be listed
+        as with a module you need to have a nested folder. If you wish to copy the code already written then you can get
+        it from the <code>modules_example_01</code> folder in the examples repository.</p>
+
+    <p>Folder structure:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code><code class="n">modules_example_01</code>/
+<code class="lineno">2 </code>    <code class="n">sqs-with-backoff</code>/
+<code class="lineno">3 </code>        <code class="n">main</code>.<code class="n">tf</code>
+<code class="lineno">4 </code>        <code class="n">variables</code>.<code class="n">tf</code>
+<code class="lineno">5 </code>        <code class="n">output</code>.<code class="n">tf</code>
+<code class="lineno">6 </code>    <code class="n">main</code>.<code class="n">tf</code>
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Code:</p>
+
+    <p>top level <code>main.tf</code>:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>module "work_queue" {
+<code class="lineno"> 7 </code>  source      = "./sqs-with-backoff"
+<code class="lineno"> 8 </code>  queue_name  = "work-queue"
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>output "work_queue_name" {
+<code class="lineno">12 </code>  value = module.work_queue.queue_name
+<code class="lineno">13 </code>}
+<code class="lineno">14 </code>
+<code class="lineno">15 </code>output "work_queue_dead_letter_name" {
+<code class="lineno">16 </code>  value = module.work_queue.dead_letter_queue_name
+<code class="lineno">17 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>sqs-with-backoff/main.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>resource "aws_sqs_queue" "sqs" {
+<code class="lineno"> 2 </code>  name                       = "awesome_co-<code class="cp">${</code><code
+                    class="n">var</code><code class="o">.</code><code class="n">queue_name</code><code
+                    class="cp">}</code>"
+<code class="lineno"> 3 </code>  visibility_timeout_seconds = var.visibility_timeout
+<code class="lineno"> 4 </code>  delay_seconds              = 0
+<code class="lineno"> 5 </code>  max_message_size           = 262144
+<code class="lineno"> 6 </code>  message_retention_seconds  = 345600 # 4 days.
+<code class="lineno"> 7 </code>  receive_wait_time_seconds  = 20 # Enable long polling
+<code class="lineno"> 8 </code>  redrive_policy             = "{\"deadLetterTargetArn\":\"<code
+                    class="cp">${</code><code class="n">aws_sqs_queue</code><code class="o">.</code><code class="n">sqs_dead_</code>\
+<code class="lineno"> 9 </code><code class="n">letter</code><code class="o">.</code><code class="n">arn</code><code
+                    class="cp">}</code>\",\"maxReceiveCount\":<code class="cp">${</code><code class="n">var</code><code
+                    class="o">.</code><code class="n">max_receive_count</code><code class="cp">}</code>}"
+<code class="lineno">10 </code>}
+<code class="lineno">11 </code>
+<code class="lineno">12 </code>resource "aws_sqs_queue" "sqs_dead_letter" {
+<code class="lineno">13 </code>  name                       = "awsome_co-<code class="cp">${</code><code
+                    class="n">var</code><code class="o">.</code><code class="n">queue_name</code><code
+                    class="cp">}</code>-dead-letter"
+<code class="lineno">14 </code>  delay_seconds              = 0
+<code class="lineno">15 </code>  max_message_size           = 262144
+<code class="lineno">16 </code>  message_retention_seconds  = 1209600 # 14 days.
+<code class="lineno">17 </code>  receive_wait_time_seconds  = 20
+<code class="lineno">18 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>sqs-with-backoff/output.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>output "queue_arn" {
+<code class="lineno"> 2 </code>  value = aws_sqs_queue.sqs.arn
+<code class="lineno"> 3 </code>}
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>output "queue_name" {
+<code class="lineno"> 6 </code>  value = aws_sqs_queue.sqs.name
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code>output "dead_letter_queue_arn" {
+<code class="lineno">10 </code>  value = aws_sqs_queue.sqs_dead_letter.arn
+<code class="lineno">11 </code>}
+<code class="lineno">12 </code>
+<code class="lineno">13 </code>output "dead_letter_queue_name" {
+<code class="lineno">14 </code>  value = aws_sqs_queue.sqs_dead_letter.name
+<code class="lineno">15 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>sqs-with-backoff/variables.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>variable "queue_name" {
+<code class="lineno"> 2 </code>  description = "Name of queue"
+<code class="lineno"> 3 </code>}
+<code class="lineno"> 4 </code>
+<code class="lineno"> 5 </code>variable "max_receive_count"{
+<code class="lineno"> 6 </code>  description = "The maximum number of times that a message can be received by consu\
+<code class="lineno"> 7 </code>mers"
+<code class="lineno"> 8 </code>  default = 5
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>variable "visibility_timeout" {
+<code class="lineno">12 </code>  default = 30
+<code class="lineno">13 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>We have written quite a lot of code. Lets dive into it piece by piece and explain what it is all doing. In a
+        module you can take arguments. This allows you to give the user a chance to specify things about this instance
+        of a module. The module that we have written is a module that creates two AWS SQS queues. One of the queues is a
+        dead letter queue of the other. For our module we are allowing the user to specify the name of the queue. We are
+        doing this by defining the variable <code>queue_name</code>. Variables have a special meaning when used with a
+        module, they are the input values for your module. Note that inside a module Terraform does not care what the
+        filenames are as long as they end in <code>.tf</code>. However, there is a convention where variables go in a
+        file called <code>variables.tf</code> so we are going to stick with that. As the <code>queue_name</code>
+        variable does not have a default a value must be given when the module is used. Variables in modules at in the
+        same way as they do at the top level as we learnt in chapter 10, if you do not provide a default value then you
+        have to provide a value for the variable when using the module. As <code>queue_name</code> does not have a
+        default, it is a required parameter that must be set when using this module. The other two variables we have
+        defined <code>max_receive_count</code> and <code>visibility_timeout</code> have defaults, so they do not have to
+        be given values when using the module.</p>
+
+    <p>Next lets look at the <code>main.tf</code> file inside the module. You can see that we are using the passed in
+        variables by using the <code>var.&lt;variable_name&gt;</code> syntax. The other interesting thing about the code
+        is that we are setting the <code>redrive_policy</code> of the first queue to have a dead letter queue arn of the
+        second queue. We are doing this using the interpolation syntax we learnt earlier. This allows Terraform to
+        dynamically put the arn from the second queue in the redrive policy when it creates the first queue.</p>
+
+    <p>The last file that makes up our module is <code>output.tf</code>. This is where our outputs (or return values)
+        from the module are specified. It is optional to return values out of a module but most modules do return values
+        as it makes them easier to use. Outputs are defined using the <code>output</code> blocks that we learnt back in
+        Chapter 7. Return values in a module can be used in the main Terraform project.</p>
+
+    <p>Look at the top level <code>main.tf</code> file and we can see how we create an instance of a module:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code><code class="k">module</code> <code
+                class="s">"work_queue"</code> {
+<code class="lineno">2 </code>  <code class="n">source</code>      = <code class="s">"./sqs-with-backoff"</code>
+<code class="lineno">3 </code>  <code class="n">queue_name</code>  = <code class="s">"work-queue"</code>
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>To create an instance of a module we start with the keyword <code>module</code>. You then follow that with the
+        identifier you want to use to refer to that instance of the module. You then surround the module block in <code>{</code>
+        and <code>}</code>. Inside the module every module has a property called <code>source</code>. The
+        <code>source</code> property is where the code is for the module. You can see that we are using the local path
+        <code>./sqs-with-backoff</code>. This is telling Terraform that it can find the code for this module in a local
+        folder with that name. We are then giving a value of <code>work-queue</code> to the <code>queue_name</code>
+        property. Note that we are not specifying the <code>max_receive_count</code> or <code>visibility_timeout</code>.
+        We do not need to as they both have default values. If we wanted to we could give values for them and then they
+        would be used instead of the defaults.</p>
+
+    <p>At the bottom of the <code>main.tf</code> we are outputting the values of the names of the two queues that are
+        created in the module. This is working because we are referencing the values returned by the module. To
+        reference a value returned by a module, you use the following syntax <code>module.&lt;module_identifier&gt;.&lt;output_name&gt;</code>.
+        So to reference the value of the main queue you would use <code>module.work_queue.queue_name</code>. The keyword
+        <code>module</code> is constant.</p>
+
+    <p>Open a terminal inside the project and run <code>terraform init</code> and <code>terraform apply</code> then
+        confirm by typing <code>yes</code>. You will see that two AWS SQS queues get created. One is a dead letter queue
+        of the other and the queue names are printed to the console when Terraform finishes running.</p>
+
+    <p>The real power of modules is that it allows you to put logic such as this in a single place and then reuse it
+        across your Terraform project. You can have multiple instances of a module in a single Terraform project. If you
+        add the following code to the top level <code>main.tf</code> in your project (or code can be found in <code>modules_example_02</code>):
+    </p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code><code class="k">module</code> <code
+                class="s">"thread_queue"</code> {
+<code class="lineno">2 </code>  <code class="n">source</code>      = <code class="s">"./sqs-with-backoff"</code>
+<code class="lineno">3 </code>  <code class="n">queue_name</code>  = <code class="s">"thread-queue"</code>
+<code class="lineno">4 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Above we are defining a second instance of a the same module. If you run the project now (<code>terraform
+        apply</code>) you will see that Terraform creates two more queues one being a dead letter of the second. This is
+        a good way to write code because if we want to change something about the way our queues are constructed we can
+        change it in a single place and then run <code>terraform apply</code> and all of instances of the module will
+        get this change. For example try changing the <code>max_message_size</code> property on one of the queues inside
+        the module and run Terraform again. You will see that both queues get updated. If you would have written this
+        code by having all of the SQS resources in the top level Terraform project then you would have had 4 Terraform
+        resources defined (one for each queue) and if you wanted to make a change you would have had to update each
+        resource with that change. That would quickly become unmanageable if you had tens or even hundreds of instances
+        of your module.</p>
+
+    <p>Using modules also allows you to define a structure of how items should look. In our example we prefixed our
+        queue names with <code>awesome_co-</code>. This is a great technique if you want to name all of your queues in a
+        certain way. You could optionally take a variable which is the name of the environment and then the module will
+        prefix the name of the environment onto the queue name so the queue names will not clash.</p>
+
+    <h2 id="leanpub-auto-returning-a-complex-type-from-a-module" class="section">Returning a complex type from a
+        module</h2>
+
+    <p>It is possible to return a whole resource from a module. This means we can give all of the fields back from the
+        resource that we created which then lets the user use whichever values that they want. To see this in action
+        lets update the sqs backoff example that we just worked on (or copy the folder <code>modules_example_02</code>
+        from the examples repository).</p>
+
+    <p>Start by updating the <code>output.tf</code> file inside the <code>sqs-with-backoff</code> directory to the
+        following:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>output "queue" {
+<code class="lineno">2 </code>  value = aws_sqs_queue.sqs
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>output "dead_letter_queue" {
+<code class="lineno">6 </code>  value = aws_sqs_queue.sqs_dead_letter
+<code class="lineno">7 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>What we are doing is setting the <code>value</code> of the <code>queue</code> output to the <code>aws_sqs_queue.sqs</code>
+        SQS queue resource itself. This is saying return every attribute of that resource from the <code>queue</code>
+        output. We are then doing the same with the <code>dead_letter</code> output for the dead letter queue resource.
+        Next update the <code>main.tf</code> by removing all of the outputs and replacing them with:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>output "work_queue" {
+<code class="lineno">2 </code>  value = module.work_queue.queue
+<code class="lineno">3 </code>}
+<code class="lineno">4 </code>
+<code class="lineno">5 </code>output "work_queue_dead_letter_queue" {
+<code class="lineno">6 </code>  value = module.work_queue.dead_letter_queue
+<code class="lineno">7 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Run the terraform project again you will see that all of the attributes of both queues are now printed to the
+        console. As all of the attributes are being returned as outputs from both of the queues the consumer of the
+        <code>sqs-with-backoff</code> module is free to use any of those attributes in the rest of their Terraform
+        project.</p>
+
+    <h2 id="leanpub-auto-modules-using-a-sub-module" class="section">Modules using a sub module</h2>
+
+    <p>Modules can themselves use modules inside them. We are going to go through an example of a 3 way cross talk
+        module. The purpose of this module is to setup ingress and egress on a protocol and port of your choosing
+        between 3 AWS security groups in both directions. To do this by hand would require 12 security group rules but
+        this can be shortened by using modules.</p>
+
+    <p>Lets dive straight into the example. If you are following along with the book then create a folder in your work
+        space and add the following file structure (or if you are using the examples repository then the code can be
+        found in the folder <code>modules_example_03</code>):</p>
+
+    <p>Folder structure:</p>
+    cross-talk/<br/> main.tf<br/> variables.tf<br/> cross-talk-3-way/<br/> main.tf<br/> variables.tf<br/> main.tf<br/>
+    <p>cross-talk/main.tf:</p>
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>resource "aws_security_group_rule" "first_egress" {
+<code class="lineno"> 2 </code>  from_port                 = var.port
+<code class="lineno"> 3 </code>  to_port                   = var.port
+<code class="lineno"> 4 </code>  protocol                  = var.protocol
+<code class="lineno"> 5 </code>  security_group_id         = var.security_group_1.id
+<code class="lineno"> 6 </code>  type                      = "egress"
+<code class="lineno"> 7 </code>  source_security_group_id  = var.security_group_2.id
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>resource "aws_security_group_rule" "first_ingress" {
+<code class="lineno">11 </code>  from_port                 = var.port
+<code class="lineno">12 </code>  to_port                   = var.port
+<code class="lineno">13 </code>  protocol                  = var.protocol
+<code class="lineno">14 </code>  security_group_id         = var.security_group_1.id
+<code class="lineno">15 </code>  type                      = "ingress"
+<code class="lineno">16 </code>  source_security_group_id  = var.security_group_2.id
+<code class="lineno">17 </code>}
+<code class="lineno">18 </code>
+<code class="lineno">19 </code>
+<code class="lineno">20 </code>resource "aws_security_group_rule" "second_egress" {
+<code class="lineno">21 </code>  from_port                 = var.port
+<code class="lineno">22 </code>  to_port                   = var.port
+<code class="lineno">23 </code>  protocol                  = var.protocol
+<code class="lineno">24 </code>  security_group_id         = var.security_group_2.id
+<code class="lineno">25 </code>  type                      = "egress"
+<code class="lineno">26 </code>  source_security_group_id  = var.security_group_1.id
+<code class="lineno">27 </code>}
+<code class="lineno">28 </code>
+<code class="lineno">29 </code>resource "aws_security_group_rule" "second_ingress" {
+<code class="lineno">30 </code>  from_port                 = var.port
+<code class="lineno">31 </code>  to_port                   = var.port
+<code class="lineno">32 </code>  protocol                  = var.protocol
+<code class="lineno">33 </code>  security_group_id         = var.security_group_2.id
+<code class="lineno">34 </code>  type                      = "ingress"
+<code class="lineno">35 </code>  source_security_group_id  = var.security_group_1.id
+<code class="lineno">36 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>cross-talk/variables.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>variable security_group_1 {}
+<code class="lineno">2 </code>variable security_group_2 {}
+<code class="lineno">3 </code>variable port {
+<code class="lineno">4 </code>  type = number
+<code class="lineno">5 </code>}
+<code class="lineno">6 </code>variable "protocol" {}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Lets pause and discuss the <code>cross-talk</code> module that we have just defined. Looking at the <code>variables.tf</code>
+        we have introduced a couple of new concepts. The first is that we are taking the whole security group resource
+        as an input. This was introduced in Terraform <code>0.12</code> and makes writing a module much easier. As it
+        means you can take the whole resource and then pick off the properties you need from it. Rather than having to
+        take all of the fields you need as separate properties, as was the case in Terraform pre <code>0.12</code>.</p>
+
+    <p>The next new concept is constraining a variable to a type. As the <code>port</code> has to be a number we can
+        constrain it by using <code>type = number</code>. This gives the user of our module some guidance so they know
+        from looking at the input that they must supply a number. It also means the IDE and tooling can prompt the user
+        before they run Terraform that the variable must be a number.</p>
+
+    <p>Inside the <code>cross-talk/main.tf</code> we are defining a security group ingress and egress pair of rules for
+        each security group passed in. This allows the traffic between them on the protocol provided in both directions.
+        This module is useful in itself in that it allows 2 way talking on a protocol and port for 2 security groups in
+        AWS.</p>
+
+    <p>cross-talk-3-way/main.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code><code class="k">module</code> <code
+                class="s">"first_to_second"</code> {
+<code class="lineno"> 2 </code>  <code class="n">source</code>            = <code class="s">"../cross-talk"</code>
+<code class="lineno"> 3 </code>  <code class="n">security_group_1</code>  = <code class="n">var</code>.<code class="n">security_group_1</code>
+<code class="lineno"> 4 </code>  <code class="n">security_group_2</code>  = <code class="n">var</code>.<code class="n">security_group_2</code>
+<code class="lineno"> 5 </code>  <code class="n">protocol</code>          = <code class="n">var</code>.<code class="n">protocol</code>
+<code class="lineno"> 6 </code>  <code class="n">port</code>              = <code class="n">var</code>.<code class="n">port</code>
+<code class="lineno"> 7 </code>}
+<code class="lineno"> 8 </code>
+<code class="lineno"> 9 </code><code class="k">module</code> <code class="s">"second_to_third"</code> {
+<code class="lineno">10 </code>  <code class="n">source</code>            = <code class="s">"../cross-talk"</code>
+<code class="lineno">11 </code>  <code class="n">security_group_1</code>  = <code class="n">var</code>.<code class="n">security_group_2</code>
+<code class="lineno">12 </code>  <code class="n">security_group_2</code>  = <code class="n">var</code>.<code class="n">security_group_3</code>
+<code class="lineno">13 </code>  <code class="n">protocol</code>          = <code class="n">var</code>.<code class="n">protocol</code>
+<code class="lineno">14 </code>  <code class="n">port</code>              = <code class="n">var</code>.<code class="n">port</code>
+<code class="lineno">15 </code>}
+<code class="lineno">16 </code>
+<code class="lineno">17 </code><code class="k">module</code> <code class="s">"first_to_third"</code> {
+<code class="lineno">18 </code>  <code class="n">source</code>            = <code class="s">"../cross-talk"</code>
+<code class="lineno">19 </code>  <code class="n">security_group_1</code>  = <code class="n">var</code>.<code class="n">security_group_1</code>
+<code class="lineno">20 </code>  <code class="n">security_group_2</code>  = <code class="n">var</code>.<code class="n">security_group_3</code>
+<code class="lineno">21 </code>  <code class="n">protocol</code>          = <code class="n">var</code>.<code class="n">protocol</code>
+<code class="lineno">22 </code>  <code class="n">port</code>              = <code class="n">var</code>.<code class="n">port</code>
+<code class="lineno">23 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>cross-talk-3-way/variables.tf:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>variable security_group_1 {}
+<code class="lineno">2 </code>variable security_group_2 {}
+<code class="lineno">3 </code>variable security_group_3 {}
+<code class="lineno">4 </code>variable port {
+<code class="lineno">5 </code>  type = number
+<code class="lineno">6 </code>}
+<code class="lineno">7 </code>variable "protocol" {}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>The next module <code>cross-talk-3-way</code> has one extra variable (<code>security_group_3</code>) to take the
+        third security group resource. It then simply has 3 instances of the <code>cross-talk</code> module. As we have
+        3 modules then there are 3 pairs that we need to open up rules between. By using a module to define a cross talk
+        between two security groups and then another module to define cross talking between three, we can keep our
+        Terraform code neat and compact. This is a good example where having sub modules makes the code quite readable.
+    </p>
+
+    <p>However, often using too many sub modules can make your code confusing and overly complex. So they are a matter
+        of judgement. A good rule of thumb is not to go more than one level of nesting deep unless you have a really
+        good reason like it makes the code much easier to read and understand. If that is not the case then it is
+        probably not the place to use a module.</p>
+
+    <p>To finish our example define the following <code>main.tf</code> at the top level:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>resource "aws_security_group" "group_1" {
+<code class="lineno"> 7 </code>  name = "security group 1"
+<code class="lineno"> 8 </code>}
+<code class="lineno"> 9 </code>
+<code class="lineno">10 </code>resource "aws_security_group" "group_2" {
+<code class="lineno">11 </code>  name = "security group 2"
+<code class="lineno">12 </code>}
+<code class="lineno">13 </code>
+<code class="lineno">14 </code>resource "aws_security_group" "group_3" {
+<code class="lineno">15 </code>  name = "security group 3"
+<code class="lineno">16 </code>}
+<code class="lineno">17 </code>
+<code class="lineno">18 </code>module "cross_talk_groups" {
+<code class="lineno">19 </code>  source            = "./cross-talk-3-way"
+<code class="lineno">20 </code>  security_group_1  = aws_security_group.group_1
+<code class="lineno">21 </code>  security_group_2  = aws_security_group.group_2
+<code class="lineno">22 </code>  security_group_3  = aws_security_group.group_3
+<code class="lineno">23 </code>  port              = 8500
+<code class="lineno">24 </code>  protocol          = "tcp"
+<code class="lineno">25 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>In our <code>main.tf</code> we are configuring our AWS provider with <code>region</code> and pinned to a <code>version</code>
+        (as per best practice as we have learnt). We are then defining 3 security groups. Lastly we are using the <code>cross-talk-3-way</code>
+        module to setup cross talking between them on <code>tcp</code> on port <code>8500</code>. By using modules to
+        implement the cross talk functionality our actual Terraform code (which is everything in the top level folder)
+        is short and concise. If we wrote all of the code to implement cross talking between the 3 security groups at
+        the top level we would end up with 12 security group rule resources. We would have to make sure that we got each
+        of those exactly right. By using modules we can define the logic in a simpler and easier to understand way. As
+        first we have a module that allows cross talking between 2 modules then that module is used to create a module
+        that allows cross talking between 3 security groups. Then at the top level our code is much shorter and more
+        readable.</p>
+
+    <h2 id="leanpub-auto-remote-modules" class="section">Remote modules</h2>
+
+    <p>Modules are great for enabling you to reuse blocks of configuration across a project but what if you want to
+        build up a library of great modules and share them across your company or with your friends? Terraform have
+        solved that with remote modules. A remote module is a module hosted externally to the local file system.
+        Terraform supports many different remote module sources such as GitHub, BitBucket and S3</p>
+
+    <p>We are going to use GitHub to host the module <code>sqs-with-backoff</code> module that we declared and then
+        reference it from our local project. Create a new folder and then paste the following into <code>main.tf</code>
+        (or get the code from <code>modules_example_04</code> folder in the examples repository):</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno"> 1 </code>provider "aws" {
+<code class="lineno"> 2 </code>  region  = "eu-west-1"
+<code class="lineno"> 3 </code>  version = "~&gt; 2.27"
+<code class="lineno"> 4 </code>}
+<code class="lineno"> 5 </code>
+<code class="lineno"> 6 </code>module "work_queue" {
+<code class="lineno"> 7 </code>  source      = "github.com/kevholditch/sqs-with-backoff"
+<code class="lineno"> 8 </code>  queue_name  = "work-queue"
+<code class="lineno"> 9 </code>}
+<code class="lineno">10 </code>
+<code class="lineno">11 </code>output "work_queue" {
+<code class="lineno">12 </code>  value = module.work_queue.queue
+<code class="lineno">13 </code>}
+<code class="lineno">14 </code>
+<code class="lineno">15 </code>output "work_queue_dead_letter_queue" {
+<code class="lineno">16 </code>  value = module.work_queue.dead_letter_queue
+<code class="lineno">17 </code>}
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>You will notice that this code is almost the same as the code we wrote earlier when using the <code>sqs-with-backoff</code>
+        module. The only difference is that we are setting the <code>source</code> of the module to <code>github.com/kevholditch/sqs-with-backoff</code>
+        rather than the local path to the folder. By default Terraform will add on the <code>https://</code> on the
+        front of the URL so we do not need to include that.</p>
+
+    <p>Initialise Terraform by opening a terminal and running <code>terraform init</code> from inside the folder where
+        you have written the <code>main.tf</code> file. You will see at the top of the output something like the
+        following:</p>
+
+
+    <figure class="code " dir="ltr">
+        <figcaption></figcaption>
+        <div class="highlight"><pre><code></code><code class="lineno">1 </code>Initializing modules...
+<code class="lineno">2 </code>Downloading github.com/kevholditch/sqs-with-backoff for work_queue...
+<code class="lineno">3 </code>- work_queue in .terraform/modules/work_queue
+</pre>
+        </div>
+
+    </figure>
+
+
+    <p>Terraform clones the code for the module when it is initialised. The code is downloaded to <code>.terraform/modules</code>.
+        If you have a look in that folder you will see the module as defined in the repository <code>github.com/kevholditch/sqs-with-backoff</code>.
+        As we have specified the URL to the repository the clone will be done from GitHub using https. If you want to
+        instead clone using SSH then you can do that by changing the URL to <code>git@github.com:kevholditch/sqs-with-backoff.git</code>
+        which is the SSH clone address. It is cool that Terraform allows you to clone the module either way. <i>Note you
+            will need SSH setup with GitHub in order for the SSH clone to work</i>.</p>
+
+    <p>Run the project in by running <code>terraform apply</code> and you will see the same output as before where the
+        two SQS queues are created, one being a dead letter queue of the other one. </p>
+
+    <p>In a team environment when you are using remote modules to share your modules using GitHub you want to ensure
+        that every time Terraform is run that it always uses the same version of the module. You want to be able to
+        consciously control when you move to a newer version of the module if one is checked in. By default with the
+        code we have written above you will always get the latest version of the module every time you run Terraform,
+        which is probably not what you want. As if someone makes a change to the module then that change will start
+        rolling out the next time anyone runs a Terraform project that references the module.</p>
+
+    <p>To get around this problem you can pin the version of the remote module you reference by using a git tag. A tag
+        in git is simply a marker to a commit. You can think of a git tag as a branch that never moves. In the
+        repository <code>github.com/kevholditch/sqs-with-backoff</code> I have created a tag <code>0.0.1</code> which
+        points to an older version of the module. If you update the source in our code example to <code>github.com/kevholditch/sqs-with-backoff?ref=0.0.1</code>
+        (or get the code from <code>modules_example_05</code> in the examples repository) and run <code>terraform
+            init</code> and then <code>terraform apply</code> again. You will notice that the SQS queue names are now
+        prefixed with <code>bad_co</code> instead of <code>awesome_co</code>. </p>
+
+    <p>This happened because by adding the parameter <code>ref=0.0.1</code> we are telling Terraform to use the source
+        code inside the GitHub repository from the commit that was tagged with <code>0.0.1</code>. The commit that the
+        tag points to has the different queue prefix in, so you can see that something has changed. When you omit the
+        <code>ref</code> parameter as we did at the start, you get the latest version from the <code>master</code>
+        branch. This is almost never what you want, as otherwise your code will update any time someone makes a change.
+        It is much better to be able to control when you move by using the <code>ref</code> parameter.</p>
+
+    <p>Now update the source url to <code>github.com/kevholditch/sqs-with-backoff?ref=0.0.2</code>. Run <code>terraform
+        init</code> and <code>terraform apply</code> again. The SQS queue names now get put back to
+        <code>awesome_co</code>. The tag <code>0.0.2</code> also points to the latest version of the <code>master</code>
+        branch so the effect is the same as leaving the <code>ref</code> parameter off.</p>
+
+
+</div>
+</body>
+</html>
